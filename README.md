@@ -61,6 +61,18 @@ Run the scheduling tests with `npm test`.
 
 Until both are set, emails are printed in the server log instead of sent. If Resend is down or rejects a message, the error is logged and the app keeps working. The API key stays on the server: it is never sent to the browser or included in the built website.
 
+### Forgot a password
+
+Sarah can reset anyone else's password in **Admin → Family members → Reset password**. To reset any password, including Sarah's, from the computer running the app:
+
+```bash
+# stop the app first (Ctrl + C), then:
+npm run reset-password -- Sarah
+npm run dev
+```
+
+Then tap that person on the login screen and set a new password (they'll need the `FAMILY_CODE` from `.env`). Their bookings, settings and admin access stay the same.
+
 ## Where data lives
 
 Everything is stored in `data/`: `db.json`, uploaded car photos and insurance documents. That folder and `.env` are **git-ignored**, so passwords, API keys, contact details and insurance files never end up on GitHub. Back up `data/` if you host this somewhere.
