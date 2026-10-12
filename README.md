@@ -73,6 +73,16 @@ npm run dev
 
 Then tap that person on the login screen and set a new password (they'll need the `FAMILY_CODE` from `.env`). Their bookings, settings and admin access stay the same.
 
+## Hosting it online
+
+The app is an always-on Node server that saves data to disk, so it needs a host with a persistent disk. GitHub Pages and Vercel don't fit without a rewrite. `render.yaml` sets it up on [Render](https://render.com) (about $7/month plus about $0.25/month for the disk):
+
+1. In Render, choose **New → Blueprint** and pick this GitHub repo.
+2. Fill in `FAMILY_CODE`, `TZ`, `APP_URL`, `RESEND_API_KEY` and `EMAIL_FROM` when asked. `JWT_SECRET` is generated for you.
+3. To use your own domain, add it under the service's **Settings → Custom Domains** and copy the DNS records Render shows into your domain registrar. HTTPS is set up automatically. Then set `APP_URL` to `https://yourdomain.com`.
+
+The hosted site starts with a fresh database, so set up profiles, photos and plates again there.
+
 ## Where data lives
 
 Everything is stored in `data/`: `db.json`, uploaded car photos and insurance documents. That folder and `.env` are **git-ignored**, so passwords, API keys, contact details and insurance files never end up on GitHub. Back up `data/` if you host this somewhere.

@@ -31,6 +31,8 @@ if (!process.env.FAMILY_CODE) console.warn('[warn] FAMILY_CODE not set — using
 seed();
 
 const app = express();
+// Hosting platforms put the app behind an HTTPS proxy.
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
@@ -132,6 +134,9 @@ const removeUpload = (url) => {
 // ---------- auth ----------
 
 // Shown on the login screen so people can tap their own avatar.
+// Lets the host check the app is up.
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
 app.get('/api/family', (_req, res) => {
   res.json(db().users.map((u) => ({ id: u.id, name: u.name, color: u.color, claimed: !!u.passwordHash })));
 });

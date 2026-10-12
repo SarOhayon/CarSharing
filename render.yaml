@@ -1,0 +1,33 @@
+# Render Blueprint: Render → New → Blueprint → pick this repo.
+# Runs the app as one always-on web service with a persistent disk for the
+# database, car photos, insurance documents and request proof.
+services:
+  - type: web
+    name: ohayon-car-sharing
+    runtime: node
+    plan: starter # a persistent disk needs a paid instance
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data
+      - key: JWT_SECRET
+        generateValue: true
+      # You'll be asked for these when you create the Blueprint:
+      - key: FAMILY_CODE
+        sync: false
+      - key: TZ # e.g. America/New_York
+        sync: false
+      - key: APP_URL # e.g. https://ohayoncars.com
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
