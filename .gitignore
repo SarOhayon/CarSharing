@@ -1,0 +1,21 @@
+# Dependencies & builds
+node_modules/
+dist/
+
+# Secrets & environment files — never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# App data: the JSON database, uploaded car photos and insurance documents
+data/
+
+# Logs & OS / editor junk
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
