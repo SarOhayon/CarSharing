@@ -39,7 +39,7 @@ export const notify = {
   requestReceived(user, car, r) {
     return send(user, `Request sent: ${car.name} · ${fmt(r.start)}`, {
       heading: 'Your request is waiting for approval',
-      intro: 'This is more than two weeks out, so an approver needs to OK it. We’ll email you when they decide.',
+      intro: 'Special requests need an approver’s OK. We’ll email you when they decide.',
       rows: [...carRows(car), ['From', fmt(r.start)], ['Until', fmt(r.end)], ['Note', r.note]],
     });
   },
