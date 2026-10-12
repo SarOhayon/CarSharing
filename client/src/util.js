@@ -19,6 +19,13 @@ export const startOfWeek = (d) => addDays(startOfDay(d), -new Date(d).getDay());
 const pad = (n) => String(n).padStart(2, '0');
 export const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
+// Value for a <input type="datetime-local"> in the browser's time zone.
+export const toLocalInput = (d) => {
+  const x = new Date(d);
+  x.setMinutes(x.getMinutes() - x.getTimezoneOffset());
+  return x.toISOString().slice(0, 16);
+};
+
 export const fmtTime = (d) =>
   new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(':00', '');
 export const fmtDay = (d) => new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });

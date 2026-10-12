@@ -8,7 +8,7 @@ import cookieParser from 'cookie-parser';
 import multer from 'multer';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { db, save, id, DATA_DIR, UPLOAD_DIR } from './db.js';
+import { db, save, id, DATA_DIR, UPLOAD_DIR, PROOF_DIR } from './db.js';
 import { seed } from './seed.js';
 import { eventsFor, findConflict, findSeriesConflict, bookingWindowEnd } from './schedule.js';
 import { emailConfigured } from './email.js';
@@ -108,17 +108,22 @@ function validateContact({ email, phone }, selfId) {
 const fmt = (iso) =>
   new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (_req, file, cb) => cb(null, `${id()}${path.extname(file.originalname).toLowerCase().slice(0, 8)}`),
-  }),
-  limits: { fileSize: 15 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const ok = /^image\//.test(file.mimetype) || file.mimetype === 'application/pdf';
-    cb(ok ? null : new HttpError(400, 'Only images and PDFs are allowed'), ok);
-  },
-});
+const uploader = (destination) =>
+  multer({
+    storage: multer.diskStorage({
+      destination,
+      filename: (_req, file, cb) => cb(null, `${id()}${path.extname(file.originalname).toLowerCase().slice(0, 8)}`),
+    }),
+    limits: { fileSize: 15 * 1024 * 1024, files: 5 },
+    fileFilter: (_req, file, cb) => {
+      const ok = /^image\//.test(file.mimetype) || file.mimetype === 'application/pdf';
+      cb(ok ? null : new HttpError(400, 'Only images and PDFs are allowed'), ok);
+    },
+  });
+const upload = uploader(UPLOAD_DIR);
+const proofUpload = uploader(PROOF_DIR);
+const removeProofs = (item) =>
+  (item?.proof || []).forEach((p) => fs.rm(path.join(PROOF_DIR, path.basename(p.file)), { force: true }, () => {}));
 const removeUpload = (url) => {
   if (!url?.startsWith('/uploads/')) return;
   fs.rm(path.join(UPLOAD_DIR, path.basename(url)), { force: true }, () => {});
@@ -237,50 +242,74 @@ app.get('/api/events', (req, res) => {
 
 app.post(
   '/api/reservations',
+  proofUpload.array('proof', 5),
   wrap(async (req, res) => {
-    const data = db();
-    const { carId, note = '', request = false } = req.body;
-    const start = new Date(req.body.start);
-    const end = new Date(req.body.end);
-    const car = data.cars.find((c) => c.id === carId);
-    if (!car) fail(400, 'Pick a car');
-    if (isNaN(start) || isNaN(end) || end <= start) fail(400, 'That time range doesn’t look right');
-    if (start < new Date(Date.now() - 30 * 60_000)) fail(400, 'You can’t book in the past');
-
-    const conflict = findConflict(data, carId, start, end);
-    if (conflict) {
-      const who = data.users.find((u) => u.id === conflict.userId)?.name || 'Someone';
-      fail(409, `${who} already has the ${car.name} then (${fmt(conflict.start)})`);
+    // Files are saved before validation runs; drop them if the request fails.
+    const files = req.files || [];
+    try {
+      await createReservation(req, res, files);
+    } catch (err) {
+      files.forEach((f) => fs.rm(f.path, { force: true }, () => {}));
+      throw err;
     }
-
-    const outside = end > bookingWindowEnd();
-    let status = 'approved';
-    if (outside && !req.user.canApprove) {
-      if (!request) fail(400, 'That’s more than 2 weeks out — send it as a special request instead', 'OUTSIDE_WINDOW');
-      status = 'pending';
-    }
-    const r = {
-      id: id(),
-      carId,
-      userId: req.user.id,
-      start: start.toISOString(),
-      end: end.toISOString(),
-      note: String(note).slice(0, 300),
-      status,
-      special: outside,
-      createdAt: new Date().toISOString(),
-    };
-    data.reservations.push(r);
-    save();
-    if (status === 'pending') {
-      await notify.requestReceived(req.user, car, r);
-      await notify.approversNewRequest(req.user, car, r, 'reservation');
-    } else {
-      await notify.bookingConfirmed(req.user, car, r);
-    }
-    res.json(r);
   }),
 );
+
+async function createReservation(req, res, files) {
+  const data = db();
+  const { carId, note = '' } = req.body;
+  const request = req.body.request === true || req.body.request === 'true';
+  const start = new Date(req.body.start);
+  const end = new Date(req.body.end);
+  const car = data.cars.find((c) => c.id === carId);
+  if (!car) fail(400, 'Pick a car');
+  if (isNaN(start) || isNaN(end) || end <= start) fail(400, 'That time range doesn’t look right');
+  if (start < new Date(Date.now() - 30 * 60_000)) fail(400, 'You can’t book in the past');
+
+  const conflict = findConflict(data, carId, start, end);
+  if (conflict) {
+    const who = data.users.find((u) => u.id === conflict.userId)?.name || 'Someone';
+    fail(409, `${who} already has the ${car.name} then (${fmt(conflict.start)})`);
+  }
+
+  const outside = end > bookingWindowEnd();
+  let status = 'approved';
+  if (outside && !req.user.canApprove) {
+    if (!request) fail(400, 'That’s more than 2 weeks out — send it as a special request instead', 'OUTSIDE_WINDOW');
+    status = 'pending';
+  }
+  // Reapplying after a decline links the new request to the old one.
+  let reapplyOf = null;
+  if (req.body.reapplyOf) {
+    const prev = data.reservations.find((x) => x.id === req.body.reapplyOf);
+    if (!prev || prev.userId !== req.user.id || prev.status !== 'denied') fail(400, 'You can only reapply for your own declined requests');
+    if (data.reservations.some((x) => x.reapplyOf === prev.id)) fail(400, 'You already reapplied for that request');
+    reapplyOf = prev.id;
+  }
+
+  const r = {
+    id: id(),
+    carId,
+    userId: req.user.id,
+    start: start.toISOString(),
+    end: end.toISOString(),
+    note: String(note).slice(0, 500),
+    status,
+    special: outside,
+    proof: files.map((f) => ({ id: id(), name: f.originalname.slice(0, 120), file: f.filename, mime: f.mimetype })),
+    reapplyOf,
+    createdAt: new Date().toISOString(),
+  };
+  data.reservations.push(r);
+  save();
+  if (status === 'pending') {
+    await notify.requestReceived(req.user, car, r);
+    await notify.approversNewRequest(req.user, car, r, 'reservation');
+  } else {
+    await notify.bookingConfirmed(req.user, car, r);
+  }
+  res.json(r);
+}
 
 // Tells the owner their booking was cancelled, unless it had already ended
 // or was a request that never got approved.
@@ -301,6 +330,7 @@ app.delete(
     if (r.userId !== req.user.id && !req.user.isOwner) fail(403, 'You can only cancel your own reservations');
     data.reservations = data.reservations.filter((x) => x.id !== r.id);
     save();
+    removeProofs(r);
     await notifyCancelled(r, 'reservation', req.user);
     res.json({ ok: true });
   }),
@@ -400,6 +430,7 @@ app.post(
     const item = list.find((x) => x.id === req.params.id);
     if (!item) fail(404, 'Request not found');
     const approve = !!req.body.approve;
+    const reason = String(req.body.reason || '').trim().slice(0, 500);
     if (approve) {
       const clash =
         req.params.kind === 'series'
@@ -410,6 +441,7 @@ app.post(
     item.status = approve ? 'approved' : 'denied';
     item.decidedBy = req.user.id;
     item.decidedAt = new Date().toISOString();
+    item.decisionNote = reason;
     save();
     const car = data.cars.find((c) => c.id === item.carId);
     const owner = data.users.find((u) => u.id === item.userId);
@@ -417,6 +449,17 @@ app.post(
     res.json(item);
   }),
 );
+
+// Proof files: only the person who asked, approvers and the owner can open them.
+app.get('/api/requests/:id/proof/:proofId', (req, res) => {
+  const r = db().reservations.find((x) => x.id === req.params.id);
+  const p = r?.proof?.find((x) => x.id === req.params.proofId);
+  if (!p) fail(404, 'File not found');
+  if (r.userId !== req.user.id && !req.user.canApprove && !req.user.isOwner) fail(403, 'You can’t view this file');
+  res.type(p.mime);
+  res.setHeader('Content-Disposition', `inline; filename="${p.name.replace(/[^\w.\- ]/g, '_')}"`);
+  res.sendFile(path.join(PROOF_DIR, path.basename(p.file)));
+});
 
 // ---------- admin ----------
 
@@ -478,6 +521,7 @@ admin.delete('/cars/:id', (req, res) => {
   removeUpload(car.photo);
   car.insurance.forEach((d) => removeUpload(d.url));
   data.cars = data.cars.filter((c) => c.id !== car.id);
+  data.reservations.filter((r) => r.carId === car.id).forEach(removeProofs);
   data.reservations = data.reservations.filter((r) => r.carId !== car.id);
   data.series = data.series.filter((s) => s.carId !== car.id);
   save();
@@ -559,6 +603,7 @@ admin.delete('/users/:id', (req, res) => {
   if (user.canApprove && data.users.filter((u) => u.canApprove).length === 1)
     fail(400, 'Give someone else approval power first');
   data.users = data.users.filter((u) => u.id !== user.id);
+  data.reservations.filter((r) => r.userId === user.id).forEach(removeProofs);
   data.reservations = data.reservations.filter((r) => r.userId !== user.id);
   data.series = data.series.filter((s) => s.userId !== user.id);
   save();

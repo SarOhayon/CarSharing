@@ -6,9 +6,13 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 export const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
+// Proof for special requests lives outside UPLOAD_DIR so it is never served
+// statically; a route checks who may open each file.
+export const PROOF_DIR = path.join(DATA_DIR, 'proofs');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+fs.mkdirSync(PROOF_DIR, { recursive: true });
 
 export const id = () => crypto.randomUUID();
 

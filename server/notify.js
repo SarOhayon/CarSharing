@@ -92,8 +92,10 @@ export const notify = {
     const what = kind === 'series' ? `“${item.title}” (${seriesWhen(item)}, ${item.startDate} → ${item.endDate})` : `${fmt(item.start)} – ${fmt(item.end)}`;
     return send(user, `${approve ? 'Approved' : 'Not approved'}: ${car.name}`, {
       heading: approve ? 'Your request was approved' : 'Your request wasn’t approved',
-      intro: approve ? `${approver.name} approved your request — it’s confirmed.` : `${approver.name} declined your request. Try another time or car.`,
-      rows: [...carRows(car), ['Booking', what], ...(approve ? pickupRows(car) : [])],
+      intro: approve
+        ? `${approver.name} approved your request — it’s confirmed.`
+        : `${approver.name} declined your request.${kind === 'reservation' ? ' You can reapply with proof from the Requests page.' : ''}`,
+      rows: [...carRows(car), ['Booking', what], [approve ? 'Note' : 'Reason', item.decisionNote], ...(approve ? pickupRows(car) : [])],
     });
   },
 
@@ -102,10 +104,15 @@ export const notify = {
     const approvers = db().users.filter((u) => u.canApprove && u.id !== requester.id);
     return Promise.all(
       approvers.map((a) =>
-        send(a, `New request from ${requester.name}: ${car.name}`, {
-          heading: `${requester.name} needs your OK`,
+        send(a, `${item.reapplyOf ? 'Reapplied' : 'New request'} from ${requester.name}: ${car.name}`, {
+          heading: item.reapplyOf ? `${requester.name} reapplied and needs your OK` : `${requester.name} needs your OK`,
           intro: 'Approve or decline it on the Requests page.',
-          rows: [...carRows(car), ['Booking', what], ['Note', item.note]],
+          rows: [
+            ...carRows(car),
+            ['Booking', what],
+            ['Note', item.note],
+            ['Proof', item.proof?.length ? `${item.proof.length} file${item.proof.length > 1 ? 's' : ''} attached — open them in the app` : null],
+          ],
         }),
       ),
     );

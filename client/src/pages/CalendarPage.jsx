@@ -5,13 +5,8 @@ import CarPlayground from '../components/CarPlayground.jsx';
 import CarPhoto from '../components/CarPhoto.jsx';
 import { Avatar, Modal, useToast } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
-import { addDays, fmtDay, fmtDuration, fmtRange, startOfWeek } from '../util.js';
-
-const toLocalInput = (d) => {
-  const x = new Date(d);
-  x.setMinutes(x.getMinutes() - x.getTimezoneOffset());
-  return x.toISOString().slice(0, 16);
-};
+import { ProofPicker, requestFormData } from '../components/ProofPicker.jsx';
+import { addDays, fmtDay, fmtDuration, fmtRange, startOfWeek, toLocalInput } from '../util.js';
 
 export default function CarCalendarPage({ me, users, cars, config, refresh, dancing, toggleDance }) {
   const toast = useToast();
@@ -52,13 +47,12 @@ export default function CarCalendarPage({ me, users, cars, config, refresh, danc
   const book = async (asRequest) => {
     setBusy(true);
     try {
-      const r = await api.post('/api/reservations', {
-        carId: car.id,
-        start: new Date(draft.start).toISOString(),
-        end: new Date(draft.end).toISOString(),
-        note: draft.note,
-        request: asRequest,
-      });
+      const r = await api.post(
+        '/api/reservations',
+        asRequest
+          ? requestFormData({ carId: car.id, start: draft.start, end: draft.end, note: draft.note, files: draft.files })
+          : { carId: car.id, start: new Date(draft.start).toISOString(), end: new Date(draft.end).toISOString(), note: draft.note },
+      );
       toast(r.status === 'pending' ? 'Request sent for approval' : `Booked the ${car.name}`);
       setDraft(null);
       load();
@@ -150,7 +144,7 @@ export default function CarCalendarPage({ me, users, cars, config, refresh, danc
             users={users}
             me={me}
             windowEnd={windowEnd}
-            onSelect={({ start, end }) => setDraft({ start: toLocalInput(start), end: toLocalInput(end), note: '' })}
+            onSelect={({ start, end }) => setDraft({ start: toLocalInput(start), end: toLocalInput(end), note: '', files: [] })}
             onEventClick={setSelected}
           />
         </section>
@@ -225,6 +219,9 @@ export default function CarCalendarPage({ me, users, cars, config, refresh, danc
               This is more than {config.bookingWindowDays} days away, so it goes to {approvers.join(' or ') || 'an approver'} for approval.
               It will show on the calendar as <b>pending</b> until then.
             </div>
+          )}
+          {draftBeyond && !me.canApprove && (
+            <ProofPicker files={draft.files || []} onChange={(files) => setDraft({ ...draft, files })} onError={(m) => toast(m, 'bad')} />
           )}
           {me.email && me.emailOptIn && <p className="muted small with-icon"><Icon name="mail" size={14} /> We’ll email {me.email} a confirmation and pickup instructions.</p>}
         </Modal>
