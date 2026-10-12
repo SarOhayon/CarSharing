@@ -124,8 +124,8 @@ export default function RequestsPage({ me, users, cars, config, refresh, go }) {
           <div className="eyebrow">{reapply ? 'Reapply' : 'Special request'}</div>
           <h2>{reapply ? 'Try again with proof' : 'Need a car way ahead?'}</h2>
           <p className="muted">
-            Regular bookings open {config.bookingWindowDays} days ahead. For anything further out, or anything that needs an OK, send a
-            request. It stays pending until {approvers.map((a) => a.name).join(' or ') || 'an approver'} approves it.
+            Regular bookings open {config.bookingWindowDays} days ahead. For anything further out, send a request —{' '}
+            {approvers.map((a) => a.name).join(' or ') || 'an approver'} will approve it.
           </p>
         </div>
 

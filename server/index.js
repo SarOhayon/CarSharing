@@ -272,14 +272,12 @@ async function createReservation(req, res, files) {
     fail(409, `${who} already has the ${car.name} then (${fmt(conflict.start)})`);
   }
 
-  // Anything sent as a special request waits for an approver, whatever the
-  // date. Plain bookings past the 2-week window must be sent as requests,
-  // except by approvers, whose own bookings go straight on the calendar.
   const outside = end > bookingWindowEnd();
   let status = 'approved';
-  if (request) status = 'pending';
-  else if (outside && !req.user.canApprove)
-    fail(400, 'That’s more than 2 weeks out — send it as a special request instead', 'OUTSIDE_WINDOW');
+  if (outside && !req.user.canApprove) {
+    if (!request) fail(400, 'That’s more than 2 weeks out — send it as a special request instead', 'OUTSIDE_WINDOW');
+    status = 'pending';
+  }
   // Reapplying after a decline links the new request to the old one.
   let reapplyOf = null;
   if (req.body.reapplyOf) {
@@ -297,7 +295,7 @@ async function createReservation(req, res, files) {
     end: end.toISOString(),
     note: String(note).slice(0, 500),
     status,
-    special: request || outside,
+    special: outside,
     proof: files.map((f) => ({ id: id(), name: f.originalname.slice(0, 120), file: f.filename, mime: f.mimetype })),
     reapplyOf,
     createdAt: new Date().toISOString(),
