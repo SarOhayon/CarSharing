@@ -2,6 +2,11 @@ import { db, save } from './db.js';
 import { eventsFor } from './schedule.js';
 import { notify } from './notify.js';
 
+// Hand-off emails go out this long before a booking ends...
+const HANDOFF_MINUTES = Number(process.env.HANDOFF_REMINDER_MINUTES || 30);
+// ...when someone else's booking on the same car starts within this long after it.
+const HANDOFF_GAP_MINUTES = Number(process.env.HANDOFF_GAP_MINUTES || 60);
+
 const offsets = () =>
   (process.env.REMINDER_OFFSETS_MINUTES || '1440,60')
     .split(',')
@@ -39,6 +44,8 @@ export async function runReminders(now = new Date()) {
     }
   }
 
+  if (await runHandoffs(data, now)) changed = true;
+
   // Forget reminders older than 30 days.
   const cutoff = now.getTime() - 30 * 24 * 60 * 60 * 1000;
   for (const [k, v] of Object.entries(data.sentReminders)) {
@@ -48,6 +55,39 @@ export async function runReminders(now = new Date()) {
     }
   }
   if (changed) save();
+}
+
+// Emails whoever has a car that someone else booked right after them, so
+// they know to bring it back on time.
+async function runHandoffs(data, now) {
+  if (HANDOFF_MINUTES <= 0) return false;
+  let changed = false;
+  const soon = new Date(now.getTime() + HANDOFF_MINUTES * 60_000);
+  const ending = eventsFor(data, null, now, soon).filter(
+    (ev) => ev.status === 'approved' && new Date(ev.end) > now && new Date(ev.end) <= soon,
+  );
+
+  for (const ev of ending) {
+    const key = `handoff:${ev.id}@${ev.end}`;
+    if (data.sentReminders[key]) continue;
+    const end = new Date(ev.end);
+    const next = eventsFor(data, ev.carId, end, new Date(end.getTime() + HANDOFF_GAP_MINUTES * 60_000))
+      .filter((n) => n.status === 'approved' && n.userId !== ev.userId && new Date(n.start) >= end)
+      .sort((a, b) => a.start.localeCompare(b.start))[0];
+    if (!next) continue;
+
+    const user = data.users.find((u) => u.id === ev.userId);
+    const nextUser = data.users.find((u) => u.id === next.userId);
+    const car = data.cars.find((c) => c.id === ev.carId);
+    if (!user || !nextUser || !car || !user.email || user.emailOptIn === false) continue;
+
+    const res = await notify.handoffReminder(user, car, ev, next, nextUser, (end - now) / 60_000);
+    if (res.ok) {
+      data.sentReminders[key] = now.toISOString();
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 export function startReminderLoop() {

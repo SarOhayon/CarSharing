@@ -15,6 +15,7 @@ A website for sharing the Ohayon family cars. Drag on a calendar to reserve a ca
   - a **booking confirmation** when you reserve a car or a repeating event is confirmed
   - a **cancellation** notice when a booking is cancelled (including by an admin)
   - **pickup instructions** 24 hours and 1 hour before each reservation, using the instructions set per car in Admin
+  - a **hand-off reminder** 30 minutes before your booking ends, if someone else has the same car within an hour after you, saying who's next and when (adjust with `HANDOFF_REMINDER_MINUTES` and `HANDOFF_GAP_MINUTES`)
   - approvers get an email for each new request, and requesters get one when it's approved or declined
 
   Anyone can switch these off in their profile.

@@ -73,6 +73,21 @@ export const notify = {
     });
   },
 
+  handoffReminder(user, car, ev, next, nextUser, minutesLeft) {
+    const timeOnly = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return send(user, `${nextUser.name} has the ${car.name} next, at ${timeOnly(next.start)}`, {
+      heading: `Please bring the ${car.name} back by ${timeOnly(ev.end)}`,
+      intro: `Your booking ends in ${Math.max(1, Math.round(minutesLeft))} minutes, and ${nextUser.name} has the car right after you.`,
+      rows: [
+        ...carRows(car),
+        ['Your booking ends', fmt(ev.end)],
+        [`${nextUser.name}’s booking starts`, fmt(next.start)],
+        ['Where to leave it', car.pickupInstructions],
+      ],
+      footer: 'Running late? Let them know so they can plan around it.',
+    });
+  },
+
   decision(user, car, item, kind, approve, approver) {
     const what = kind === 'series' ? `“${item.title}” (${seriesWhen(item)}, ${item.startDate} → ${item.endDate})` : `${fmt(item.start)} – ${fmt(item.end)}`;
     return send(user, `${approve ? 'Approved' : 'Not approved'}: ${car.name}`, {
