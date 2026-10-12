@@ -9,7 +9,7 @@ const FAMILY = [
 ];
 
 const CARS = [
-  { name: 'Tesla Model 3', make: 'Tesla', model: 'Model 3', year: 2023, color: 'Grey', paint: '#7c8188', interior: 'Black', style: 'sedan' },
+  { name: 'Tesla Model 3', make: 'Tesla', model: 'Model 3', year: 2023, color: 'Grey', paint: '#4b4e56', interior: 'Black', style: 'sedan' },
   { name: 'G-Wagon', make: 'Mercedes-Benz', model: 'G-Class', year: null, color: 'Grey', paint: '#6b7075', interior: 'Red', style: 'boxy' },
   { name: 'Cadillac Escalade', make: 'Cadillac', model: 'Escalade', year: null, color: 'Black', paint: '#22252b', interior: 'Black', style: 'suv' },
   { name: 'Tesla Model Y', make: 'Tesla', model: 'Model Y', year: null, color: 'Black', paint: '#16181d', interior: 'Black', style: 'crossover' },
@@ -54,5 +54,8 @@ export function seed() {
     if (sarah) sarah.isOwner = true;
   }
   for (const u of data.users) delete u.isAdmin;
+  // The Model 3 was first drawn a lighter grey than the real car; match it
+  // unless someone already picked a different paint in Admin.
+  for (const c of data.cars) if (c.name === 'Tesla Model 3' && c.paint === '#7c8188') c.paint = '#4b4e56';
   save();
 }
