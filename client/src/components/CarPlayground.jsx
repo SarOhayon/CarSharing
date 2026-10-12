@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 
 // The selected car's photo, which you can turn by dragging it (or its knob).
-export default function CarPlayground({ car, canUpload }) {
+export default function CarPlayground({ car, canUpload, dancing, onDance }) {
   const stage = useRef(null);
   const [rot, setRot] = useState(0);
-  const [smooth, setSmooth] = useState(false);
   const drag = useRef(null);
 
   useEffect(() => setRot(0), [car?.id]);
@@ -18,18 +17,12 @@ export default function CarPlayground({ car, canUpload }) {
   const onDown = (e) => {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    setSmooth(false);
     drag.current = angleAt(e) - rot;
   };
   const onMove = (e) => {
     if (drag.current !== null) setRot(angleAt(e) - drag.current);
   };
   const onUp = () => (drag.current = null);
-
-  const turn = (deg) => {
-    setSmooth(true);
-    setRot((r) => (deg === null ? 0 : r + deg));
-  };
 
   if (!car) return null;
 
@@ -44,33 +37,21 @@ export default function CarPlayground({ car, canUpload }) {
       </div>
 
       {car.photo ? (
-        <>
-          <div className="stage" ref={stage}>
-            <div
-              className={`toy ${smooth ? 'smooth' : ''}`}
-              style={{ transform: `translate(-50%, -50%) rotate(${rot}deg)` }}
-              onPointerDown={onDown}
-              onPointerMove={onMove}
-              onPointerUp={onUp}
-              onPointerCancel={onUp}
-              title="Drag to turn the car"
-            >
-              <div className="rotate-handle"><span /></div>
-              <img src={car.photo} alt={car.name} draggable={false} />
-            </div>
-            <div className="stage-hint">Drag to turn</div>
+        <div className="stage" ref={stage}>
+          <div
+            className="toy"
+            style={{ transform: `translate(-50%, -50%) rotate(${rot}deg)` }}
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
+            title="Drag to turn the car"
+          >
+            <div className="rotate-handle"><span /></div>
+            <img src={car.photo} alt={car.name} draggable={false} />
           </div>
-
-          <div className="toy-controls">
-            <button className="chip" onClick={() => turn(-90)} title="Turn left">
-              <Icon name="rotateLeft" size={14} /> Turn left
-            </button>
-            <button className="chip" onClick={() => turn(90)} title="Turn right">
-              <Icon name="rotateRight" size={14} /> Turn right
-            </button>
-            <button className="chip" onClick={() => turn(null)}>Reset</button>
-          </div>
-        </>
+          <div className="stage-hint">Drag to turn</div>
+        </div>
       ) : (
         <div className="stage empty-photo">
           <Icon name="image" size={30} strokeWidth={1.5} />
@@ -84,6 +65,10 @@ export default function CarPlayground({ car, canUpload }) {
           </span>
         </div>
       )}
+
+      <button className={`dance-btn ${dancing ? 'on' : ''}`} onClick={onDance}>
+        {dancing ? 'Stop dancing' : 'Dance mode'}
+      </button>
 
       <dl className="car-facts">
         <div><dt>Model</dt><dd>{[car.year, car.make, car.model].filter(Boolean).join(' ') || '—'}</dd></div>

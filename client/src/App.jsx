@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { Avatar, ToastProvider } from './components/ui.jsx';
 import Icon from './components/Icon.jsx';
 import { useTheme } from './theme.js';
+import DanceParty from './components/DanceParty.jsx';
 import Login from './pages/Login.jsx';
 import CalendarPage from './pages/CalendarPage.jsx';
 import RequestsPage from './pages/RequestsPage.jsx';
@@ -45,6 +46,8 @@ function Shell() {
   const [config, setConfig] = useState(null);
   const [pending, setPending] = useState(0);
   const [route, setRoute] = useState(readRoute());
+  const [dancing, setDancing] = useState(false);
+  const stopDancing = useCallback(() => setDancing(false), []);
 
   useEffect(() => {
     const onHash = () => setRoute(readRoute());
@@ -91,7 +94,7 @@ function Shell() {
     await api.post('/api/auth/logout');
     setMe(null);
   };
-  const ctx = { me, setMe, users, cars, config, refresh, go };
+  const ctx = { me, setMe, users, cars, config, refresh, go, dancing, toggleDance: () => setDancing((d) => !d) };
   const tabs = TABS.filter((t) => !t.admin || me.isAdmin);
   const current = route === 'profile' || tabs.some((t) => t.id === route) ? route : 'calendar';
 
@@ -121,6 +124,7 @@ function Shell() {
         </div>
       </header>
 
+      {dancing && <DanceParty onStop={stopDancing} />}
       <main className="page">
         {current === 'calendar' && <CalendarPage {...ctx} />}
         {current === 'recurring' && <RecurringPage {...ctx} />}

@@ -9,7 +9,7 @@ A website for sharing the Ohayon family cars. Drag on a calendar to reserve a ca
 - **Everyone has their own color.** Change yours in your profile; Sarah can change anyone's.
 - **2-week booking window.** Anyone can book up to 14 days ahead. Anything further out is shaded on the calendar and becomes a **special request**. The request shows as *pending* until someone with approval power (Dad by default) approves it on the **Requests** page.
 - **Repeating events.** Set up something like *"School, Mon–Fri 7:30–3:30"*, pick the first and last day it runs, and it shows up every week in between. You can skip a single day (holidays, sick days). Repeating events from non-approvers also go through approval.
-- **Car panel.** Next to the calendar is the selected car with its details and pickup instructions. Drag the photo to turn it, or use the turn buttons. Cars show real photos: upload one per car in **Admin → Edit car → Upload photo**. Until then the car shows a "No photo yet" placeholder.
+- **Car panel.** Next to the calendar is the selected car with its details and pickup instructions. Drag the photo to turn it. Press **Dance mode** and the whole screen dances: colors swirl, everything wiggles and cars rain down for 20 seconds (or until you press Stop or Escape). Cars show real photos: upload one per car in **Admin → Edit car → Upload photo**. Until then the car shows a "No photo yet" placeholder.
 - **Light and dark mode.** Use the moon/sun button at the top; each device remembers its choice.
 - **Email notifications** through Resend:
   - a **booking confirmation** when you reserve a car or a repeating event is confirmed

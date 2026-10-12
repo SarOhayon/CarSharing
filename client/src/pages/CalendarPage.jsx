@@ -13,7 +13,7 @@ const toLocalInput = (d) => {
   return x.toISOString().slice(0, 16);
 };
 
-export default function CarCalendarPage({ me, users, cars, config, refresh }) {
+export default function CarCalendarPage({ me, users, cars, config, refresh, dancing, toggleDance }) {
   const toast = useToast();
   const [carId, setCarId] = useState(() => localStorage.getItem('carId') || cars[0]?.id);
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
@@ -156,7 +156,7 @@ export default function CarCalendarPage({ me, users, cars, config, refresh }) {
         </section>
 
         <aside className="side">
-          <CarPlayground car={car} canUpload={me.isAdmin} />
+          <CarPlayground car={car} canUpload={me.isAdmin} dancing={dancing} onDance={toggleDance} />
           <div className="card upcoming">
             <h3>Your next drives</h3>
             {mine.length === 0 && <p className="muted">Nothing booked in the next 3 weeks.</p>}

@@ -297,14 +297,12 @@ input[type='file'] { padding: 7px; font-size: 13px; }
 .stage-hint { position: absolute; bottom: 8px; width: 100%; text-align: center; font-size: 11px; color: var(--muted); pointer-events: none; text-transform: uppercase; letter-spacing: 0.08em; }
 .toy { position: absolute; left: 50%; top: 50%; width: 230px; cursor: grab; transform: translate(-50%, -50%); will-change: transform; touch-action: none; }
 .toy:active { cursor: grabbing; }
-.toy.smooth { transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .toy svg, .toy img { width: 100%; display: block; pointer-events: none; filter: drop-shadow(0 12px 14px rgba(0, 0, 0, 0.22)); border-radius: 8px; }
 .rotate-handle { position: absolute; left: 50%; top: -34px; transform: translateX(-50%); width: 2px; height: 30px; background: var(--accent); cursor: alias; opacity: 0; transition: opacity 0.2s; }
 .rotate-handle span { position: absolute; top: -10px; left: -9px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); border: 3px solid var(--accent); }
 .rotate-handle::before { content: ''; position: absolute; inset: -14px -16px; }
 .stage:hover .rotate-handle, .toy:active .rotate-handle { opacity: 1; }
 @media (hover: none) { .rotate-handle { opacity: 1; } }
-.toy-controls { display: flex; flex-wrap: wrap; gap: 6px; }
 .car-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; }
 .car-facts div { background: var(--surface-2); padding: 8px 12px; border-radius: 10px; }
 .car-facts dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
@@ -425,3 +423,62 @@ a.doc:hover { text-decoration: none; background: var(--accent-soft); }
 .toy img { border-radius: 12px; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25); filter: none; }
 .stage.empty-photo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; color: var(--muted); border-style: dashed; }
 .stage.empty-photo strong { color: var(--text); }
+
+/* ---------- dance mode ---------- */
+.dance-btn {
+  width: 100%; padding: 11px 16px; border-radius: 12px; font-weight: 700; color: #fff;
+  background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981, #3b82f6, #a855f7, #ef4444);
+  background-size: 300% 100%; animation: dance-gradient 6s linear infinite; box-shadow: 0 4px 14px var(--ring);
+  transition: transform 0.1s;
+}
+.dance-btn:active { transform: scale(0.97); }
+.dance-btn.on { animation-duration: 1.5s; }
+@keyframes dance-gradient { to { background-position: 300% 0; } }
+
+/* Soft color wash that drifts through the rainbow (smooth, no flashing). */
+.disco-lights {
+  position: fixed; inset: -50%; z-index: 40; pointer-events: none; mix-blend-mode: multiply; opacity: 0.32;
+  background: conic-gradient(from 0deg at 50% 50%, #ef4444, #f59e0b, #84cc16, #06b6d4, #6366f1, #d946ef, #ef4444);
+  animation: disco-spin 6s linear infinite, disco-hue 4s linear infinite;
+}
+@keyframes disco-spin { to { transform: rotate(360deg); } }
+:root[data-theme='dark'] .disco-lights { mix-blend-mode: screen; opacity: 0.28; }
+@keyframes disco-hue { to { filter: hue-rotate(360deg); } }
+
+.car-rain { position: fixed; inset: 0; z-index: 41; pointer-events: none; overflow: hidden; }
+.car-rain span {
+  position: absolute; top: -60px; line-height: 1; will-change: transform;
+  animation-name: car-fall; animation-timing-function: linear; animation-iteration-count: infinite;
+}
+@keyframes car-fall {
+  0% { transform: translate(0, -10vh) rotate(0deg); }
+  50% { transform: translate(var(--sway), 50vh) rotate(180deg); }
+  100% { transform: translate(0, 110vh) rotate(360deg); }
+}
+.stop-dance { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 42; padding: 12px 22px; border-radius: 999px; }
+
+.dancing .card, .dancing .car-tab { animation: wiggle 0.9s ease-in-out infinite; }
+.dancing .card:nth-child(2n), .dancing .car-tab:nth-child(2n) { animation-delay: -0.45s; }
+.dancing .tab, .dancing .avatar, .dancing .legend-item i { animation: hop 0.6s ease-in-out infinite; }
+.dancing .tab:nth-child(2n), .dancing .legend-item:nth-child(2n) i { animation-delay: -0.3s; }
+.dancing .event { animation: hop 0.5s ease-in-out infinite; }
+.dancing .day-head .dom { animation: hop 0.7s ease-in-out infinite; }
+.dancing .day-head:nth-child(2n) .dom { animation-delay: -0.35s; }
+.dancing .toy img { animation: car-dance 1.2s ease-in-out infinite; }
+.dancing .logo { animation: spin 1.5s linear infinite; }
+@keyframes wiggle { 0%, 100% { transform: rotate(-1.2deg) translateY(0); } 50% { transform: rotate(1.2deg) translateY(-6px); } }
+@keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes car-dance {
+  0%, 100% { transform: rotate(-12deg) scale(1); }
+  25% { transform: translateY(-12px) rotate(0deg) scale(1.08); }
+  50% { transform: rotate(12deg) scale(1); }
+  75% { transform: translateY(-12px) rotate(0deg) scale(1.08); }
+}
+
+/* People who've asked their device for less motion get the colors and a gentle car drift only. */
+@media (prefers-reduced-motion: reduce) {
+  .dancing .card, .dancing .car-tab, .dancing .tab, .dancing .avatar, .dancing .event, .dancing .day-head .dom,
+  .dancing .toy img, .dancing .logo, .dancing .legend-item i { animation: none; }
+  .disco-lights { animation-duration: 20s, 12s; }
+  .car-rain span { animation-duration: 14s !important; }
+}
