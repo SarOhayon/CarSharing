@@ -1,4 +1,4 @@
-import CarArt from '../components/CarArt.jsx';
+import CarPhoto from '../components/CarPhoto.jsx';
 import { Empty } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
 
@@ -15,7 +15,7 @@ export default function InsurancePage({ cars, me }) {
         {cars.map((c) => (
           <div key={c.id} className="card pad insurance-card">
             <div className="ins-head">
-              <div className="car-thumb">{c.photo ? <img src={c.photo} alt="" /> : <CarArt style={c.style} paint={c.paint} interior={c.interior} />}</div>
+              <div className="car-thumb"><CarPhoto car={c} /></div>
               <div>
                 <h3>{c.name}</h3>
                 <span className="plate">{c.plate || 'NO PLATE'}</span>

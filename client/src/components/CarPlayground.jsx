@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import CarArt from './CarArt.jsx';
 import Icon from './Icon.jsx';
 
-// The selected car, which you can turn by dragging the car (or its knob).
-export default function CarPlayground({ car }) {
+// The selected car's photo, which you can turn by dragging it (or its knob).
+export default function CarPlayground({ car, canUpload }) {
   const stage = useRef(null);
   const [rot, setRot] = useState(0);
   const [smooth, setSmooth] = useState(false);
@@ -44,36 +43,47 @@ export default function CarPlayground({ car }) {
         <span className="plate">{car.plate || 'NO PLATE'}</span>
       </div>
 
-      <div className="stage" ref={stage}>
-        <div className="stage-grid" />
-        <div
-          className={`toy ${smooth ? 'smooth' : ''}`}
-          style={{ transform: `translate(-50%, -50%) rotate(${rot}deg)` }}
-          onPointerDown={onDown}
-          onPointerMove={onMove}
-          onPointerUp={onUp}
-          onPointerCancel={onUp}
-          title="Drag to turn the car"
-        >
-          <div className="rotate-handle"><span /></div>
-          {car.photo ? (
-            <img src={car.photo} alt={car.name} draggable={false} />
-          ) : (
-            <CarArt style={car.style} paint={car.paint} interior={car.interior} title={car.name} />
-          )}
-        </div>
-        <div className="stage-hint">Drag to turn</div>
-      </div>
+      {car.photo ? (
+        <>
+          <div className="stage" ref={stage}>
+            <div
+              className={`toy ${smooth ? 'smooth' : ''}`}
+              style={{ transform: `translate(-50%, -50%) rotate(${rot}deg)` }}
+              onPointerDown={onDown}
+              onPointerMove={onMove}
+              onPointerUp={onUp}
+              onPointerCancel={onUp}
+              title="Drag to turn the car"
+            >
+              <div className="rotate-handle"><span /></div>
+              <img src={car.photo} alt={car.name} draggable={false} />
+            </div>
+            <div className="stage-hint">Drag to turn</div>
+          </div>
 
-      <div className="toy-controls">
-        <button className="chip" onClick={() => turn(-90)} title="Turn left">
-          <Icon name="rotateLeft" size={14} /> Turn left
-        </button>
-        <button className="chip" onClick={() => turn(90)} title="Turn right">
-          <Icon name="rotateRight" size={14} /> Turn right
-        </button>
-        <button className="chip" onClick={() => turn(null)}>Reset</button>
-      </div>
+          <div className="toy-controls">
+            <button className="chip" onClick={() => turn(-90)} title="Turn left">
+              <Icon name="rotateLeft" size={14} /> Turn left
+            </button>
+            <button className="chip" onClick={() => turn(90)} title="Turn right">
+              <Icon name="rotateRight" size={14} /> Turn right
+            </button>
+            <button className="chip" onClick={() => turn(null)}>Reset</button>
+          </div>
+        </>
+      ) : (
+        <div className="stage empty-photo">
+          <Icon name="image" size={30} strokeWidth={1.5} />
+          <strong>No photo yet</strong>
+          <span className="muted small">
+            {canUpload ? (
+              <>Add one in <a href="#/admin">Admin</a> → Edit car.</>
+            ) : (
+              'Sarah can add one in Admin.'
+            )}
+          </span>
+        </div>
+      )}
 
       <dl className="car-facts">
         <div><dt>Model</dt><dd>{[car.year, car.make, car.model].filter(Boolean).join(' ') || '—'}</dd></div>

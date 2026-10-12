@@ -1,18 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
-import CarArt from '../components/CarArt.jsx';
+import CarPhoto from '../components/CarPhoto.jsx';
 import { Avatar, ColorPicker, Modal, useToast } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
 import { PALETTE } from '../util.js';
 
-const STYLES = [
-  { id: 'sedan', label: 'Sedan' },
-  { id: 'crossover', label: 'Crossover' },
-  { id: 'suv', label: 'Big SUV' },
-  { id: 'boxy', label: 'Boxy SUV' },
-];
-
-const blankCar = { name: '', make: '', model: '', year: '', color: '', paint: '#7c8188', interior: '', plate: '', style: 'sedan', notes: '', pickupInstructions: '' };
+const blankCar = { name: '', make: '', model: '', year: '', color: '', interior: '', plate: '', notes: '', pickupInstructions: '' };
 
 export default function AdminPage({ me, users, cars, refresh }) {
   const toast = useToast();
@@ -60,7 +53,7 @@ export default function AdminPage({ me, users, cars, refresh }) {
         <div className="admin-cars">
           {cars.map((c) => (
             <div key={c.id} className="admin-car">
-              <div className="car-thumb big">{c.photo ? <img src={c.photo} alt="" /> : <CarArt style={c.style} paint={c.paint} interior={c.interior} />}</div>
+              <div className="car-thumb big"><CarPhoto car={c} /></div>
               <div className="grow">
                 <strong>{c.name}</strong>
                 <div className="small muted">{[c.year, c.make, c.model].filter(Boolean).join(' ')} · {c.color}{c.interior ? ` / ${c.interior} interior` : ''}</div>
@@ -262,7 +255,7 @@ function CarEditor({ car, onClose, refresh, toast }) {
       <form className="stack" onSubmit={save}>
         <div className="car-editor">
           <div className="car-preview">
-            {preview ? <img src={preview} alt="" /> : <CarArt style={form.style} paint={form.paint} interior={form.interior} />}
+            <CarPhoto car={{ name: form.name, photo: preview }} />
             <label className="ghost small file-btn">
               {preview ? 'Change photo' : 'Upload photo'}
               <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files[0] || null)} />
@@ -285,22 +278,6 @@ function CarEditor({ car, onClose, refresh, toast }) {
             </div>
           </div>
         </div>
-        {!preview && (
-          <div className="row">
-            <label>
-              Drawing style
-              <select value={form.style} onChange={set('style')}>
-                {STYLES.map((s) => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Paint
-              <input type="color" value={form.paint} onChange={set('paint')} />
-            </label>
-          </div>
-        )}
         <label>
           Pickup instructions <span className="hint">included in confirmation and reminder emails</span>
           <textarea

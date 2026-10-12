@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import WeekCalendar from '../components/WeekCalendar.jsx';
 import CarPlayground from '../components/CarPlayground.jsx';
-import CarArt from '../components/CarArt.jsx';
+import CarPhoto from '../components/CarPhoto.jsx';
 import { Avatar, Modal, useToast } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
 import { addDays, fmtDay, fmtDuration, fmtRange, startOfWeek } from '../util.js';
@@ -107,7 +107,7 @@ export default function CarCalendarPage({ me, users, cars, config, refresh }) {
         {cars.map((c) => (
           <button key={c.id} className={`car-tab ${c.id === car.id ? 'active' : ''}`} onClick={() => setCarId(c.id)}>
             <div className="car-thumb">
-              {c.photo ? <img src={c.photo} alt="" /> : <CarArt style={c.style} paint={c.paint} interior={c.interior} />}
+              <CarPhoto car={c} />
             </div>
             <div className="car-tab-text">
               <strong>{c.name}</strong>
@@ -156,7 +156,7 @@ export default function CarCalendarPage({ me, users, cars, config, refresh }) {
         </section>
 
         <aside className="side">
-          <CarPlayground car={car} />
+          <CarPlayground car={car} canUpload={me.isAdmin} />
           <div className="card upcoming">
             <h3>Your next drives</h3>
             {mine.length === 0 && <p className="muted">Nothing booked in the next 3 weeks.</p>}

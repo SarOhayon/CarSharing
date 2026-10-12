@@ -425,11 +425,10 @@ admin.use(requireAdmin);
 
 const carFields = (body) => {
   const out = {};
-  for (const k of ['name', 'make', 'model', 'color', 'interior', 'plate', 'notes', 'style'])
+  for (const k of ['name', 'make', 'model', 'color', 'interior', 'plate', 'notes'])
     if (body[k] !== undefined) out[k] = String(body[k]).trim().slice(0, 120);
   if (body.pickupInstructions !== undefined) out.pickupInstructions = String(body.pickupInstructions).trim().slice(0, 1000);
   if (body.year !== undefined) out.year = body.year ? Number(body.year) || null : null;
-  if (body.paint !== undefined && isColor(body.paint)) out.paint = body.paint;
   if (out.plate) out.plate = out.plate.toUpperCase();
   return out;
 };
@@ -447,8 +446,6 @@ admin.post('/cars', upload.single('photo'), (req, res) => {
     plate: '',
     notes: '',
     pickupInstructions: '',
-    style: 'sedan',
-    paint: '#7c8188',
     ...fields,
     photo: req.file ? `/uploads/${req.file.filename}` : null,
     insurance: [],

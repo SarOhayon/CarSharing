@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { Avatar, ColorPicker } from '../components/ui.jsx';
-import CarArt from '../components/CarArt.jsx';
 import Icon from '../components/Icon.jsx';
 import { PALETTE } from '../util.js';
 
@@ -45,10 +44,6 @@ export default function Login({ onLogin }) {
   return (
     <div className="login">
       <div className="login-hero">
-        <div className="hero-cars">
-          <CarArt style="boxy" paint="#6b7075" interior="Red" />
-          <CarArt style="sedan" paint="#7c8188" />
-        </div>
         <h1>
           Ohayon <b>Car Sharing</b>
         </h1>
