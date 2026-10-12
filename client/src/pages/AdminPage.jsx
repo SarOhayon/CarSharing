@@ -11,16 +11,16 @@ const STYLES = [
   { id: 'boxy', label: 'Boxy SUV' },
 ];
 
-const blankCar = { name: '', make: '', model: '', year: '', color: '', paint: '#7c8188', interior: '', plate: '', style: 'sedan', notes: '' };
+const blankCar = { name: '', make: '', model: '', year: '', color: '', paint: '#7c8188', interior: '', plate: '', style: 'sedan', notes: '', pickupInstructions: '' };
 
 export default function AdminPage({ me, users, cars, refresh }) {
   const toast = useToast();
   const [editing, setEditing] = useState(null); // car object or 'new'
-  const [sms, setSms] = useState(null);
+  const [email, setEmail] = useState(null);
   const [newMember, setNewMember] = useState({ name: '', color: PALETTE[6] });
 
   useEffect(() => {
-    api.get('/api/admin/sms').then(setSms).catch(() => {});
+    api.get('/api/admin/email').then(setEmail).catch(() => {});
   }, []);
 
   const run = async (fn, ok) => {
@@ -46,8 +46,8 @@ export default function AdminPage({ me, users, cars, refresh }) {
         <div className="stat card"><span>{cars.length}</span>cars</div>
         <div className="stat card"><span>{users.length}</span>family members</div>
         <div className="stat card"><span>{users.filter((u) => u.canApprove).length}</span>can approve</div>
-        <div className={`stat card ${sms?.configured ? '' : 'warn'}`}>
-          <span>{sms?.configured ? 'On' : 'Off'}</span>SMS texts
+        <div className={`stat card ${email?.configured ? '' : 'warn'}`}>
+          <span>{email?.configured ? 'On' : 'Off'}</span>email notifications
         </div>
       </div>
 
@@ -78,7 +78,7 @@ export default function AdminPage({ me, users, cars, refresh }) {
         <div className="section-head">
           <h2>Family members</h2>
         </div>
-        <p className="muted small">“Can approve” decides who gets to OK special requests and repeating events. Approvers get a text when a new request comes in.</p>
+        <p className="muted small">“Can approve” decides who gets to OK special requests and repeating events. Approvers get an email when a new request comes in.</p>
         <div className="table-wrap">
           <table className="table">
             <thead>
@@ -168,17 +168,20 @@ export default function AdminPage({ me, users, cars, refresh }) {
       </section>
 
       <section className="card pad">
-        <h2>Text reminders</h2>
-        {sms?.configured ? (
-          <p className="muted">Twilio is connected. Members get a text 24 hours and 1 hour before each reservation.</p>
+        <h2>Email notifications</h2>
+        {email?.configured ? (
+          <p className="muted">
+            Resend is connected. Members get booking confirmations, cancellation notices, and pickup instructions 24 hours and 1 hour before
+            each reservation.
+          </p>
         ) : (
           <div className="notice warn">
-            Texts are switched off. Add <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code> and <code>TWILIO_FROM_NUMBER</code> to the
-            server’s <code>.env</code> file to turn them on. Until then, messages are only printed in the server log.
+            Emails are switched off. Add <code>RESEND_API_KEY</code> and <code>EMAIL_FROM</code> to the server’s <code>.env</code> file to turn them
+            on. Until then, messages are only printed in the server log.
           </div>
         )}
-        <button className="ghost" onClick={() => run(() => api.post('/api/admin/sms/test'), `Test text sent to ${me.phone}`)}>
-          Send me a test text
+        <button className="ghost" onClick={() => run(() => api.post('/api/admin/email/test'), `Test email sent to ${me.email}`)}>
+          Send me a test email
         </button>
       </section>
 
@@ -299,6 +302,16 @@ function CarEditor({ car, onClose, refresh, toast }) {
             </label>
           </div>
         )}
+        <label>
+          Pickup instructions <span className="hint">included in confirmation and reminder emails</span>
+          <textarea
+            rows={3}
+            value={form.pickupInstructions}
+            onChange={set('pickupInstructions')}
+            maxLength={1000}
+            placeholder="Parked in the garage, left side. Key card is in the kitchen drawer. Plug it back in when you return."
+          />
+        </label>
         <label>Notes<input value={form.notes} onChange={set('notes')} placeholder="Charging cable is in the frunk" /></label>
         <div className="actions">
           {car && <button type="button" className="danger" onClick={removeCar}>Delete car</button>}

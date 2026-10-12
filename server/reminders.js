@@ -1,6 +1,6 @@
 import { db, save } from './db.js';
 import { eventsFor } from './schedule.js';
-import { sendSms } from './sms.js';
+import { notify } from './notify.js';
 
 const offsets = () =>
   (process.env.REMINDER_OFFSETS_MINUTES || '1440,60')
@@ -8,9 +8,6 @@ const offsets = () =>
     .map((n) => Number(n.trim()))
     .filter((n) => n > 0)
     .sort((a, b) => a - b);
-
-const fmt = (iso) =>
-  new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 export async function runReminders(now = new Date()) {
   const data = db();
@@ -25,9 +22,9 @@ export async function runReminders(now = new Date()) {
     if (start <= now) continue;
     const user = data.users.find((u) => u.id === ev.userId);
     const car = data.cars.find((c) => c.id === ev.carId);
-    if (!user || !car || !user.phone || user.smsOptIn === false) continue;
+    if (!user || !car || !user.email || user.emailOptIn === false) continue;
 
-    // Only the tightest reminder that is due gets sent; any earlier, larger
+    // Pickup-instruction emails. Only the tightest reminder that is due gets sent; any earlier, larger
     // reminders that were missed (e.g. server was down) are skipped.
     const minutesLeft = (start - now) / 60_000;
     const due = offs.find((o) => minutesLeft <= o);
@@ -35,10 +32,7 @@ export async function runReminders(now = new Date()) {
     const key = `${ev.id}@${ev.start}@${due}`;
     if (data.sentReminders[key]) continue;
 
-    const when = minutesLeft >= 90 ? `in ${Math.round(minutesLeft / 60)} hours` : `in ${Math.round(minutesLeft)} min`;
-    const label = ev.recurring ? ` (${ev.title})` : '';
-    const body = `🚗 Reminder: you have the ${car.name} ${when}${label} — ${fmt(ev.start)} to ${fmt(ev.end)}.${process.env.APP_URL ? ` ${process.env.APP_URL}` : ''}`;
-    const res = await sendSms(user.phone, body);
+    const res = await notify.pickupReminder(user, car, ev, minutesLeft);
     if (res.ok) {
       for (const o of offs) if (o >= due) data.sentReminders[`${ev.id}@${ev.start}@${o}`] = now.toISOString();
       changed = true;

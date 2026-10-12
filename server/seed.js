@@ -15,7 +15,7 @@ const CARS = [
 ];
 
 // Seeds the family and the garage on first run. Family members start without a
-// password, email or phone; they "claim" their profile from the login page.
+// password or email; they "claim" their profile from the login page.
 export function seed() {
   const data = db();
   if (data.users.length === 0) {
@@ -25,7 +25,7 @@ export function seed() {
       email: '',
       phone: '',
       passwordHash: null,
-      smsOptIn: true,
+      emailOptIn: true,
       createdAt: new Date().toISOString(),
     }));
   }
@@ -37,8 +37,14 @@ export function seed() {
       photo: null,
       insurance: [],
       notes: '',
+      pickupInstructions: '',
       createdAt: new Date().toISOString(),
     }));
+  }
+  // Databases created before email notifications used an SMS opt-in flag.
+  for (const u of data.users) {
+    if (u.emailOptIn === undefined) u.emailOptIn = u.smsOptIn !== false;
+    delete u.smsOptIn;
   }
   save();
 }

@@ -201,6 +201,12 @@ export default function CarPlayground({ car }) {
           </dd>
         </div>
       </dl>
+      {car.pickupInstructions && (
+        <div className="pickup">
+          <dt>Pickup</dt>
+          <dd>{car.pickupInstructions}</dd>
+        </div>
+      )}
     </div>
   );
 }

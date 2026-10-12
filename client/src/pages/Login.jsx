@@ -51,7 +51,7 @@ export default function Login({ onLogin }) {
         <h1>
           Family<b>Car</b>Share
         </h1>
-        <p>Drag to reserve. Get a text before it’s your turn. No more “who has the car?”</p>
+        <p>Drag to reserve. Get an email with pickup instructions before it’s your turn. No more “who has the car?”</p>
       </div>
 
       <div className="login-card card">
@@ -84,13 +84,13 @@ export default function Login({ onLogin }) {
                 <Avatar user={who} size={56} />
                 <div>
                   <h2>Hi {who.name}!</h2>
-                  <p className="muted">{who.claimed ? 'Enter your password.' : 'Let’s set up your profile so we can text you reminders.'}</p>
+                  <p className="muted">{who.claimed ? 'Enter your password.' : 'Let’s set up your profile so we can email you booking confirmations and pickup instructions.'}</p>
                 </div>
               </div>
             ) : (
               <>
                 <h2>Join the family</h2>
-                <p className="muted">Add your details so we can text you before your reservations.</p>
+                <p className="muted">Add your details so we can email you about your reservations.</p>
                 <label>
                   Your name
                   <input value={form.name} onChange={set('name')} placeholder="e.g. Grandma" required autoFocus />
@@ -105,12 +105,12 @@ export default function Login({ onLogin }) {
             {setup && (
               <>
                 <label>
-                  Email
+                  Email <span className="hint">for booking emails</span>
                   <input type="email" value={form.email} onChange={set('email')} placeholder="you@email.com" required autoComplete="email" />
                 </label>
                 <label>
-                  Mobile number <span className="hint">for text reminders</span>
-                  <input type="tel" value={form.phone} onChange={set('phone')} placeholder="(555) 123-4567" required autoComplete="tel" />
+                  Mobile number <span className="hint">optional</span>
+                  <input type="tel" value={form.phone} onChange={set('phone')} placeholder="(555) 123-4567" autoComplete="tel" />
                 </label>
                 <label>
                   Family code <span className="hint">ask Dad or Sarah</span>

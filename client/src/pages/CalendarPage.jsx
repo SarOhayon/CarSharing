@@ -225,7 +225,7 @@ export default function CarCalendarPage({ me, users, cars, config, refresh }) {
               It will show on the calendar as <b>pending</b> until then.
             </div>
           )}
-          {me.phone && me.smsOptIn && <p className="muted small">📱 We’ll text {me.phone} before it starts.</p>}
+          {me.email && me.emailOptIn && <p className="muted small">✉️ We’ll email {me.email} a confirmation and pickup instructions.</p>}
         </Modal>
       )}
 

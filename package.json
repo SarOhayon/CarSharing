@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Family car sharing: drag-to-reserve calendars, special requests, recurring events, SMS reminders and an admin dashboard.",
+  "description": "Family car sharing: drag-to-reserve calendars, special requests, recurring events, email notifications and an admin dashboard.",
   "scripts": {
     "dev": "concurrently -k -n api,web -c blue,magenta \"node --watch server/index.js\" \"vite\"",
     "build": "vite build",

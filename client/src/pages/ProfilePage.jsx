@@ -5,7 +5,7 @@ import { PALETTE } from '../util.js';
 
 export default function ProfilePage({ me, setMe, refresh }) {
   const toast = useToast();
-  const [form, setForm] = useState({ name: me.name, email: me.email, phone: me.phone, color: me.color, smsOptIn: me.smsOptIn, password: '' });
+  const [form, setForm] = useState({ name: me.name, email: me.email, phone: me.phone, color: me.color, emailOptIn: me.emailOptIn, password: '' });
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e?.target ? e.target.value : e });
 
@@ -53,14 +53,14 @@ export default function ProfilePage({ me, setMe, refresh }) {
           <input type="email" value={form.email} onChange={set('email')} required />
         </label>
         <label>
-          Mobile number
-          <input type="tel" value={form.phone} onChange={set('phone')} required />
+          Mobile number <span className="hint">optional</span>
+          <input type="tel" value={form.phone} onChange={set('phone')} />
         </label>
       </div>
       <label className="switch">
-        <input type="checkbox" checked={form.smsOptIn} onChange={(e) => setForm({ ...form, smsOptIn: e.target.checked })} />
+        <input type="checkbox" checked={form.emailOptIn} onChange={(e) => setForm({ ...form, emailOptIn: e.target.checked })} />
         <span className="track" />
-        Text me reminders before my reservations
+        Email me booking confirmations, cancellations and pickup instructions
       </label>
       <label>
         New password <span className="hint">leave blank to keep</span>

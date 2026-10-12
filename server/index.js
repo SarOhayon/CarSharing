@@ -11,7 +11,8 @@ import jwt from 'jsonwebtoken';
 import { db, save, id, DATA_DIR, UPLOAD_DIR } from './db.js';
 import { seed } from './seed.js';
 import { eventsFor, findConflict, findSeriesConflict, bookingWindowEnd } from './schedule.js';
-import { sendSms, smsConfigured, normalizePhone } from './sms.js';
+import { emailConfigured } from './email.js';
+import { notify } from './notify.js';
 import { startReminderLoop } from './reminders.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -55,7 +56,7 @@ const publicUser = (u) => ({
   phone: u.phone,
   isAdmin: !!u.isAdmin,
   canApprove: !!u.canApprove,
-  smsOptIn: u.smsOptIn !== false,
+  emailOptIn: u.emailOptIn !== false,
   claimed: !!u.passwordHash,
 });
 
@@ -87,10 +88,18 @@ const requireApprover = (req, _res, next) =>
 const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
 const isColor = (s) => /^#[0-9a-f]{6}$/i.test(s || '');
 
+function normalizePhone(raw) {
+  const digits = String(raw || '').replace(/[^\d+]/g, '');
+  if (!digits || digits.startsWith('+')) return digits;
+  if (digits.length === 10) return `+1${digits}`;
+  return `+${digits}`;
+}
+
+// Email is required (it's where notifications go); phone is optional.
 function validateContact({ email, phone }, selfId) {
   if (!isEmail(email)) fail(400, 'Please enter a valid email');
   const p = normalizePhone(phone);
-  if (p.replace(/\D/g, '').length < 10) fail(400, 'Please enter a valid mobile number');
+  if (p && p.replace(/\D/g, '').length < 10) fail(400, 'That phone number looks too short');
   const taken = db().users.find((u) => u.id !== selfId && u.email.toLowerCase() === email.toLowerCase());
   if (taken) fail(400, 'That email is already used by another family member');
   return { email: email.trim(), phone: p };
@@ -98,12 +107,6 @@ function validateContact({ email, phone }, selfId) {
 
 const fmt = (iso) =>
   new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-
-async function notify(user, body) {
-  if (user?.phone && user.smsOptIn !== false) await sendSms(user.phone, body);
-}
-const notifyApprovers = (body, exceptId) =>
-  Promise.all(db().users.filter((u) => u.canApprove && u.id !== exceptId).map((u) => notify(u, body)));
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -177,7 +180,7 @@ app.post(
       passwordHash: await bcrypt.hash(password, 10),
       isAdmin: false,
       canApprove: false,
-      smsOptIn: true,
+      emailOptIn: true,
       createdAt: new Date().toISOString(),
     };
     data.users.push(user);
@@ -199,12 +202,12 @@ app.patch(
   requireAuth,
   wrap(async (req, res) => {
     const u = req.user;
-    const { name, color, smsOptIn, password } = req.body;
+    const { name, color, emailOptIn, password } = req.body;
     if (req.body.email !== undefined || req.body.phone !== undefined)
       Object.assign(u, validateContact({ email: req.body.email ?? u.email, phone: req.body.phone ?? u.phone }, u.id));
     if (name?.trim()) u.name = name.trim();
     if (isColor(color)) u.color = color;
-    if (typeof smsOptIn === 'boolean') u.smsOptIn = smsOptIn;
+    if (typeof emailOptIn === 'boolean') u.emailOptIn = emailOptIn;
     if (password) {
       if (password.length < 6) fail(400, 'Password must be at least 6 characters');
       u.passwordHash = await bcrypt.hash(password, 10);
@@ -270,21 +273,39 @@ app.post(
     };
     data.reservations.push(r);
     save();
-    if (status === 'pending')
-      await notifyApprovers(`🙋 ${req.user.name} requested the ${car.name}: ${fmt(r.start)} → ${fmt(r.end)}. Approve it in the app.`, req.user.id);
+    if (status === 'pending') {
+      await notify.requestReceived(req.user, car, r);
+      await notify.approversNewRequest(req.user, car, r, 'reservation');
+    } else {
+      await notify.bookingConfirmed(req.user, car, r);
+    }
     res.json(r);
   }),
 );
 
-app.delete('/api/reservations/:id', (req, res) => {
+// Tells the owner their booking was cancelled, unless it had already ended
+// or was a request that never got approved.
+async function notifyCancelled(item, kind, by) {
   const data = db();
-  const r = data.reservations.find((x) => x.id === req.params.id);
-  if (!r) fail(404, 'Reservation not found');
-  if (r.userId !== req.user.id && !req.user.isAdmin) fail(403, 'You can only cancel your own reservations');
-  data.reservations = data.reservations.filter((x) => x.id !== r.id);
-  save();
-  res.json({ ok: true });
-});
+  const owner = data.users.find((u) => u.id === item.userId);
+  const car = data.cars.find((c) => c.id === item.carId);
+  const over = kind === 'series' ? item.endDate < new Date().toISOString().slice(0, 10) : new Date(item.end) < new Date();
+  if (owner && car && item.status !== 'denied' && !over) await notify.cancelled(owner, car, item, kind, by);
+}
+
+app.delete(
+  '/api/reservations/:id',
+  wrap(async (req, res) => {
+    const data = db();
+    const r = data.reservations.find((x) => x.id === req.params.id);
+    if (!r) fail(404, 'Reservation not found');
+    if (r.userId !== req.user.id && !req.user.isAdmin) fail(403, 'You can only cancel your own reservations');
+    data.reservations = data.reservations.filter((x) => x.id !== r.id);
+    save();
+    await notifyCancelled(r, 'reservation', req.user);
+    res.json({ ok: true });
+  }),
+);
 
 // ---------- recurring series ----------
 
@@ -328,21 +349,25 @@ app.post(
     }
     data.series.push(s);
     save();
-    if (s.status === 'pending')
-      await notifyApprovers(`🔁 ${req.user.name} requested a repeating “${s.title}” on the ${car.name} (${startDate} → ${endDate}).`, req.user.id);
+    if (s.status === 'pending') await notify.approversNewRequest(req.user, car, s, 'series');
+    else await notify.seriesConfirmed(req.user, car, s);
     res.json(s);
   }),
 );
 
-app.delete('/api/series/:id', (req, res) => {
-  const data = db();
-  const s = data.series.find((x) => x.id === req.params.id);
-  if (!s) fail(404, 'Not found');
-  if (s.userId !== req.user.id && !req.user.isAdmin) fail(403, 'You can only remove your own events');
-  data.series = data.series.filter((x) => x.id !== s.id);
-  save();
-  res.json({ ok: true });
-});
+app.delete(
+  '/api/series/:id',
+  wrap(async (req, res) => {
+    const data = db();
+    const s = data.series.find((x) => x.id === req.params.id);
+    if (!s) fail(404, 'Not found');
+    if (s.userId !== req.user.id && !req.user.isAdmin) fail(403, 'You can only remove your own events');
+    data.series = data.series.filter((x) => x.id !== s.id);
+    save();
+    await notifyCancelled(s, 'series', req.user);
+    res.json({ ok: true });
+  }),
+);
 
 // Skip a single day of a series (holiday, sick day...).
 app.post('/api/series/:id/skip', (req, res) => {
@@ -389,8 +414,7 @@ app.post(
     save();
     const car = data.cars.find((c) => c.id === item.carId);
     const owner = data.users.find((u) => u.id === item.userId);
-    const what = req.params.kind === 'series' ? `“${item.title}” repeating booking` : `request for ${fmt(item.start)}`;
-    await notify(owner, `${approve ? '✅ Approved' : '❌ Not approved'}: your ${what} on the ${car?.name} (${req.user.name}).`);
+    if (owner && car) await notify.decision(owner, car, item, req.params.kind === 'series' ? 'series' : 'reservation', approve, req.user);
     res.json(item);
   }),
 );
@@ -404,6 +428,7 @@ const carFields = (body) => {
   const out = {};
   for (const k of ['name', 'make', 'model', 'color', 'interior', 'plate', 'notes', 'style'])
     if (body[k] !== undefined) out[k] = String(body[k]).trim().slice(0, 120);
+  if (body.pickupInstructions !== undefined) out.pickupInstructions = String(body.pickupInstructions).trim().slice(0, 1000);
   if (body.year !== undefined) out.year = body.year ? Number(body.year) || null : null;
   if (body.paint !== undefined && isColor(body.paint)) out.paint = body.paint;
   if (out.plate) out.plate = out.plate.toUpperCase();
@@ -422,6 +447,7 @@ admin.post('/cars', upload.single('photo'), (req, res) => {
     interior: '',
     plate: '',
     notes: '',
+    pickupInstructions: '',
     style: 'sedan',
     paint: '#7c8188',
     ...fields,
@@ -503,7 +529,7 @@ admin.post('/users', (req, res) => {
     passwordHash: null,
     isAdmin: false,
     canApprove: false,
-    smsOptIn: true,
+    emailOptIn: true,
     createdAt: new Date().toISOString(),
   };
   data.users.push(user);
@@ -547,14 +573,15 @@ admin.delete('/users/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-admin.get('/sms', (_req, res) => res.json({ configured: smsConfigured() }));
+// Only says whether email is set up — never returns the key or sender.
+admin.get('/email', (_req, res) => res.json({ configured: emailConfigured() }));
 admin.post(
-  '/sms/test',
+  '/email/test',
   wrap(async (req, res) => {
-    if (!req.user.phone) fail(400, 'Add your phone number in your profile first');
-    const r = await sendSms(req.user.phone, '👋 Test text from Family Car Share. Reminders are working!');
+    if (!req.user.email) fail(400, 'Add your email in your profile first');
+    const r = await notify.test(req.user);
     if (!r.ok) fail(502, r.error || 'Could not send');
-    res.json(r);
+    res.json({ ok: true, simulated: !!r.simulated });
   }),
 );
 
@@ -573,12 +600,13 @@ if (fs.existsSync(dist)) {
 app.use((err, _req, res, _next) => {
   if (err instanceof multer.MulterError) err = new HttpError(400, err.message);
   const status = err.status || 500;
-  if (status >= 500) console.error(err);
-  res.status(status).json({ error: status >= 500 ? 'Something went wrong' : err.message, code: err.code });
+  if (status >= 500 && !(err instanceof HttpError)) console.error(err);
+  // Our own HttpErrors carry safe, user-facing messages; anything else is hidden.
+  res.status(status).json({ error: err instanceof HttpError ? err.message : 'Something went wrong', code: err.code });
 });
 
 app.listen(PORT, () => {
   console.log(`🚗 Family Car Share API on http://localhost:${PORT}`);
-  console.log(`   SMS: ${smsConfigured() ? 'Twilio enabled' : 'not configured (texts are logged here)'}`);
+  console.log(`   Email: ${emailConfigured() ? 'Resend enabled' : 'not configured (emails are logged here)'}`);
   startReminderLoop();
 });
