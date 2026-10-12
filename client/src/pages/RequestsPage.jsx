@@ -27,7 +27,7 @@ export default function RequestsPage({ me, users, cars, config, refresh, go }) {
   const decide = async (item, approve) => {
     try {
       await api.post(`/api/requests/${item.kind}/${item.id}/decision`, { approve });
-      toast(approve ? 'Approved ✅' : 'Declined');
+      toast(approve ? 'Approved' : 'Declined');
       load();
       refresh();
     } catch (e) {
@@ -46,7 +46,7 @@ export default function RequestsPage({ me, users, cars, config, refresh, go }) {
         note: form.note,
         request: true,
       });
-      toast('Request sent 🙋');
+      toast('Request sent');
       setForm({ ...form, start: '', end: '', note: '' });
       load();
       refresh();
@@ -59,7 +59,7 @@ export default function RequestsPage({ me, users, cars, config, refresh, go }) {
 
   const describe = (x) =>
     x.kind === 'series'
-      ? `↻ ${x.title} · ${x.daysOfWeek.map((d) => DAY_NAMES[d]).join(', ')} ${x.startTime}–${x.endTime} · ${x.startDate} → ${x.endDate}`
+      ? `Repeating “${x.title}” · ${x.daysOfWeek.map((d) => DAY_NAMES[d]).join(', ')} ${x.startTime}–${x.endTime} · ${x.startDate} → ${x.endDate}`
       : fmtRange(x.start, x.end);
 
   const Row = ({ x, actions }) => {
@@ -87,7 +87,7 @@ export default function RequestsPage({ me, users, cars, config, refresh, go }) {
       <form className="card pad stack" onSubmit={submit}>
         <div>
           <div className="eyebrow">Special request</div>
-          <h2>Need a car way ahead? 🗓️</h2>
+          <h2>Need a car way ahead?</h2>
           <p className="muted">
             Regular bookings open {config.bookingWindowDays} days ahead. For anything further out, send a request —{' '}
             {approvers.map((a) => a.name).join(' or ') || 'an approver'} will approve it.
@@ -127,7 +127,7 @@ export default function RequestsPage({ me, users, cars, config, refresh, go }) {
             Waiting for approval {pending.length > 0 && <span className="badge">{pending.length}</span>}
           </h2>
           {!me.canApprove && <p className="muted small">Only {approvers.map((a) => a.name).join(', ') || 'approvers'} can approve these.</p>}
-          {pending.length === 0 && <Empty icon="🎉" title="All caught up">No requests waiting.</Empty>}
+          {pending.length === 0 && <Empty icon="check" title="All caught up">No requests waiting.</Empty>}
           <div className="list">
             {pending.map((x) => (
               <Row

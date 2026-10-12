@@ -1,19 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { Avatar, Empty, useToast } from '../components/ui.jsx';
+import Icon from '../components/Icon.jsx';
 import { DAY_NAMES, ymd } from '../util.js';
-
-// Handy presets so a school semester takes two taps.
-function presets() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const fall = now.getMonth() >= 6 ? y : y - 1;
-  return [
-    { label: `Fall semester (Sep–Dec ${fall})`, startDate: `${fall}-09-01`, endDate: `${fall}-12-20` },
-    { label: `Spring semester (Jan–May ${fall + 1})`, startDate: `${fall + 1}-01-08`, endDate: `${fall + 1}-05-31` },
-    { label: `Summer (Jun–Aug ${fall + 1})`, startDate: `${fall + 1}-06-01`, endDate: `${fall + 1}-08-31` },
-  ];
-}
 
 const time12 = (t) => {
   const [h, m] = t.split(':').map(Number);
@@ -25,13 +14,13 @@ export default function RecurringPage({ me, users, cars, refresh }) {
   const [series, setSeries] = useState([]);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
-    title: 'School',
+    title: '',
     carId: cars[0]?.id,
     daysOfWeek: [1, 2, 3, 4, 5],
     startTime: '07:30',
     endTime: '15:30',
     startDate: ymd(new Date()),
-    endDate: presets()[0].endDate,
+    endDate: '',
     note: '',
   });
   const userById = useMemo(() => Object.fromEntries(users.map((u) => [u.id, u])), [users]);
@@ -45,14 +34,14 @@ export default function RecurringPage({ me, users, cars, refresh }) {
   const toggleDay = (d) =>
     setForm({ ...form, daysOfWeek: form.daysOfWeek.includes(d) ? form.daysOfWeek.filter((x) => x !== d) : [...form.daysOfWeek, d] });
 
-  const weeks = Math.max(0, Math.round((new Date(form.endDate) - new Date(form.startDate)) / (7 * 864e5)));
+  const weeks = form.endDate ? Math.max(0, Math.round((new Date(form.endDate) - new Date(form.startDate)) / (7 * 864e5))) : null;
 
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
       const s = await api.post('/api/series', form);
-      toast(s.status === 'pending' ? 'Sent for approval 🙋' : 'Repeating event added to the calendar 🔁');
+      toast(s.status === 'pending' ? 'Sent for approval' : 'Repeating event added to the calendar');
       load();
       refresh();
     } catch (err) {
@@ -82,8 +71,8 @@ export default function RecurringPage({ me, users, cars, refresh }) {
       <form className="card pad stack" onSubmit={submit}>
         <div>
           <div className="eyebrow">New repeating event</div>
-          <h2>Put it on autopilot 🔁</h2>
-          <p className="muted">Great for school, practice or work. It fills in every week until the end date.</p>
+          <h2>Put it on autopilot</h2>
+          <p className="muted">Great for school, practice or work. Pick the days and the dates it runs, and it fills in every week in between.</p>
         </div>
 
         <div className="row">
@@ -123,28 +112,13 @@ export default function RecurringPage({ me, users, cars, refresh }) {
           </label>
         </div>
 
-        <div>
-          <span className="label">Event period</span>
-          <div className="chips">
-            {presets().map((p) => (
-              <button
-                type="button"
-                key={p.label}
-                className={`chip ${form.endDate === p.endDate ? 'on' : ''}`}
-                onClick={() => setForm({ ...form, startDate: p.startDate < today ? today : p.startDate, endDate: p.endDate })}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
         <div className="row">
           <label>
-            Starts
+            First day
             <input type="date" value={form.startDate} onChange={set('startDate')} required />
           </label>
           <label>
-            Ends
+            Last day
             <input type="date" value={form.endDate} min={form.startDate} onChange={set('endDate')} required />
           </label>
         </div>
@@ -156,7 +130,7 @@ export default function RecurringPage({ me, users, cars, refresh }) {
 
         <div className="notice">
           {form.daysOfWeek.length
-            ? `${[...form.daysOfWeek].sort().map((d) => DAY_NAMES[d]).join(', ')} · ${time12(form.startTime)}–${time12(form.endTime)} · about ${weeks} week${weeks === 1 ? '' : 's'}`
+            ? `${[...form.daysOfWeek].sort().map((d) => DAY_NAMES[d]).join(', ')} · ${time12(form.startTime)}–${time12(form.endTime)}${weeks === null ? ' · pick a last day' : ` · about ${weeks} week${weeks === 1 ? '' : 's'}`}`
             : 'Pick at least one day'}
           {!me.canApprove && <div className="small muted">Repeating events go to an approver before they’re confirmed.</div>}
         </div>
@@ -166,7 +140,7 @@ export default function RecurringPage({ me, users, cars, refresh }) {
 
       <section className="card pad">
         <h2>Repeating events</h2>
-        {visible.length === 0 && <Empty icon="🔁" title="Nothing repeating yet">School runs and weekly practices will show up here.</Empty>}
+        {visible.length === 0 && <Empty icon="repeat" title="Nothing repeating yet">School runs and weekly practices will show up here.</Empty>}
         <div className="list">
           {visible.map((s) => {
             const u = userById[s.userId];
@@ -185,7 +159,7 @@ export default function RecurringPage({ me, users, cars, refresh }) {
                 {s.status === 'pending' && <span className="pill warn">pending</span>}
                 {ended && <span className="pill">ended</span>}
                 {(s.userId === me.id || me.isAdmin) && (
-                  <button className="icon-btn" onClick={() => remove(s)} title="Remove">🗑</button>
+                  <button className="icon-btn" onClick={() => remove(s)} title="Remove" aria-label="Remove"><Icon name="trash" /></button>
                 )}
               </div>
             );

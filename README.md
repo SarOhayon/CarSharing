@@ -1,15 +1,16 @@
-# 🚗 Family Car Share
+# Ohayon Car Sharing
 
-A friendly website for sharing the family cars. Drag on a calendar to reserve a car, get an email with pickup instructions before your turn, and keep everyone's insurance proof in one place.
+A website for sharing the Ohayon family cars. Drag on a calendar to reserve a car, get an email with pickup instructions before your turn, and keep everyone's insurance proof in one place.
 
 ## What it does
 
 - **Login per family member.** Tap your avatar to log in. The first time, you add your **email** (where notifications go), an optional mobile number, and choose a password. New people join with **"I'm new"** using the family code.
 - **4 calendars, one per car.** Pick a car at the top and **press and drag** over the time you need, like when2meet. On a phone, tap a slot, or press and hold, then drag. A booking can span several days.
-- **Everyone has their own color.** Change yours in your profile; admins can change anyone's.
+- **Everyone has their own color.** Change yours in your profile; Sarah can change anyone's.
 - **2-week booking window.** Anyone can book up to 14 days ahead. Anything further out is shaded on the calendar and becomes a **special request**. The request shows as *pending* until someone with approval power (Dad by default) approves it on the **Requests** page.
-- **Repeating events.** Set up something like *"School, Mon–Fri 7:30–3:30, Sep–Dec"* once and it shows up every week for the whole period. Use the semester presets, or skip a single day (holidays, sick days). Repeating events from non-approvers also go through approval.
-- **Car toy.** Next to the calendar you can drag, fling, spin, rotate and flip the car. Double-click it to flip it, or scroll over it to spin it. Upload a real photo in Admin and you can play with that instead.
+- **Repeating events.** Set up something like *"School, Mon–Fri 7:30–3:30"*, pick the first and last day it runs, and it shows up every week in between. You can skip a single day (holidays, sick days). Repeating events from non-approvers also go through approval.
+- **Car panel.** Next to the calendar is the selected car with its details and pickup instructions. Drag the car to turn it, or use the turn buttons. Upload a real photo in Admin to show that instead of the drawing.
+- **Light and dark mode.** Use the moon/sun button at the top; each device remembers its choice.
 - **Email notifications** through Resend:
   - a **booking confirmation** when you reserve a car or a repeating event is confirmed
   - a **cancellation** notice when a booking is cancelled (including by an admin)
@@ -18,13 +19,13 @@ A friendly website for sharing the family cars. Drag on a calendar to reserve a 
 
   Anyone can switch these off in their profile.
 - **Insurance tab.** Every family member can open each car's insurance proof (PDF or photo).
-- **Admin dashboard.** Add, edit or remove cars (license plate, photo, color, interior, pickup instructions), upload insurance proof, add or remove family members, and choose **who can approve** requests and who is an admin.
+- **Admin dashboard (Sarah only).** Add, edit or remove cars (license plate, photo, color, interior, pickup instructions), upload insurance proof, add or remove family members, and choose **who can approve** requests. The dashboard is locked to Sarah: it's hidden for everyone else and the server refuses their admin requests. Admin access can't be given to anyone else.
 
 Seeded on first run:
 
 | People | Cars |
 | --- | --- |
-| Sarah (admin), Dad (admin + approver), Mom, Rebeccah | Tesla Model 3 (grey, 2023), G-Wagon (grey, red interior), Cadillac Escalade, Tesla Model Y (black) |
+| Sarah (owner, admin), Dad (approver), Mom, Rebeccah | Tesla Model 3 (grey, 2023), G-Wagon (grey, red interior), Cadillac Escalade, Tesla Model Y (black) |
 
 Plates, years and insurance docs are left blank. Fill them in under **Admin → Garage**.
 
@@ -53,7 +54,7 @@ Run the scheduling tests with `npm test`.
 2. Create an API key, then set these in `.env`:
    ```
    RESEND_API_KEY=re_...
-   EMAIL_FROM=Family Car Share <cars@yourdomain.com>
+   EMAIL_FROM=Ohayon Car Sharing <cars@yourdomain.com>
    ```
 3. Restart, then use **Admin → Send me a test email**.
 
@@ -69,5 +70,5 @@ Everything is stored in `data/`: `db.json`, uploaded car photos and insurance do
 server/        Express API, JSON storage, scheduling rules, email notifications
 client/src/    React app (Vite)
   pages/       Login, Calendar, Repeating, Requests, Insurance, Admin, Profile
-  components/  WeekCalendar (drag-to-book grid), CarPlayground (the car toy), CarArt
+  components/  WeekCalendar (drag-to-book grid), CarPlayground (car panel), CarArt, Icon
 ```

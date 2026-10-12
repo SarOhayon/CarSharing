@@ -19,7 +19,7 @@ export default function ProfilePage({ me, setMe, refresh }) {
       setMe(u);
       setForm({ ...form, password: '' });
       refresh();
-      toast('Saved ✨');
+      toast('Saved');
     } catch (err) {
       toast(err.message, 'bad');
     } finally {

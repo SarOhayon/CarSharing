@@ -30,7 +30,7 @@ const seriesWhen = (s) => `${s.daysOfWeek.map((d) => DAYS[d]).join(', ')} · ${s
 export const notify = {
   bookingConfirmed(user, car, r) {
     return send(user, `Booked: ${car.name} · ${fmt(r.start)}`, {
-      heading: `You’ve got the ${car.name} 🎉`,
+      heading: `You’ve got the ${car.name}`,
       intro: 'Your reservation is confirmed.',
       rows: [...carRows(car), ['From', fmt(r.start)], ['Until', fmt(r.end)], ['Note', r.note], ...pickupRows(car)],
     });
@@ -38,7 +38,7 @@ export const notify = {
 
   requestReceived(user, car, r) {
     return send(user, `Request sent: ${car.name} · ${fmt(r.start)}`, {
-      heading: 'Your request is waiting for approval 🙋',
+      heading: 'Your request is waiting for approval',
       intro: 'This is more than two weeks out, so an approver needs to OK it. We’ll email you when they decide.',
       rows: [...carRows(car), ['From', fmt(r.start)], ['Until', fmt(r.end)], ['Note', r.note]],
     });
@@ -46,7 +46,7 @@ export const notify = {
 
   seriesConfirmed(user, car, s) {
     return send(user, `Repeating booking confirmed: ${s.title}`, {
-      heading: `“${s.title}” is on the calendar 🔁`,
+      heading: `“${s.title}” is on the calendar`,
       intro: `The ${car.name} is yours every week for this event.`,
       rows: [...carRows(car), ['When', seriesWhen(s)], ['Period', `${s.startDate} → ${s.endDate}`], ...pickupRows(car)],
     });
@@ -76,7 +76,7 @@ export const notify = {
   decision(user, car, item, kind, approve, approver) {
     const what = kind === 'series' ? `“${item.title}” (${seriesWhen(item)}, ${item.startDate} → ${item.endDate})` : `${fmt(item.start)} – ${fmt(item.end)}`;
     return send(user, `${approve ? 'Approved' : 'Not approved'}: ${car.name}`, {
-      heading: approve ? 'Your request was approved ✅' : 'Your request wasn’t approved',
+      heading: approve ? 'Your request was approved' : 'Your request wasn’t approved',
       intro: approve ? `${approver.name} approved your request — it’s confirmed.` : `${approver.name} declined your request. Try another time or car.`,
       rows: [...carRows(car), ['Booking', what], ...(approve ? pickupRows(car) : [])],
     });
@@ -88,7 +88,7 @@ export const notify = {
     return Promise.all(
       approvers.map((a) =>
         send(a, `New request from ${requester.name}: ${car.name}`, {
-          heading: `${requester.name} needs your OK 🙋`,
+          heading: `${requester.name} needs your OK`,
           intro: 'Approve or decline it on the Requests page.',
           rows: [...carRows(car), ['Booking', what], ['Note', item.note]],
         }),
@@ -99,8 +99,8 @@ export const notify = {
   test(user) {
     return send(
       user,
-      'Test email from Family Car Share',
-      { heading: 'Email is working 👋', intro: 'You’ll get booking confirmations, cancellations and pickup instructions at this address.' },
+      'Test email from Ohayon Car Sharing',
+      { heading: 'Email is working', intro: 'You’ll get booking confirmations, cancellations and pickup instructions at this address.' },
       { force: true },
     );
   },

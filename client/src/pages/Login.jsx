@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { Avatar, ColorPicker } from '../components/ui.jsx';
 import CarArt from '../components/CarArt.jsx';
+import Icon from '../components/Icon.jsx';
 import { PALETTE } from '../util.js';
 
 export default function Login({ onLogin }) {
@@ -49,7 +50,7 @@ export default function Login({ onLogin }) {
           <CarArt style="sedan" paint="#7c8188" />
         </div>
         <h1>
-          Family<b>Car</b>Share
+          Ohayon <b>Car Sharing</b>
         </h1>
         <p>Drag to reserve. Get an email with pickup instructions before it’s your turn. No more “who has the car?”</p>
       </div>
@@ -68,7 +69,7 @@ export default function Login({ onLogin }) {
                 </button>
               ))}
               <button className="family-pick add" onClick={() => pick('new')}>
-                <span className="avatar plus" style={{ width: 64, height: 64 }}>＋</span>
+                <span className="avatar plus" style={{ width: 64, height: 64 }}><Icon name="plus" size={26} /></span>
                 <span>I’m new</span>
               </button>
             </div>
@@ -78,7 +79,7 @@ export default function Login({ onLogin }) {
 
         {who && (
           <form onSubmit={submit} className="stack">
-            <button type="button" className="link back" onClick={() => setWho(null)}>← Back</button>
+            <button type="button" className="link back" onClick={() => setWho(null)}><Icon name="arrowLeft" size={15} /> Back</button>
             {who !== 'new' ? (
               <div className="who">
                 <Avatar user={who} size={56} />
@@ -113,7 +114,7 @@ export default function Login({ onLogin }) {
                   <input type="tel" value={form.phone} onChange={set('phone')} placeholder="(555) 123-4567" autoComplete="tel" />
                 </label>
                 <label>
-                  Family code <span className="hint">ask Dad or Sarah</span>
+                  Family code <span className="hint">ask Sarah</span>
                   <input value={form.familyCode} onChange={set('familyCode')} required />
                 </label>
               </>
@@ -134,7 +135,7 @@ export default function Login({ onLogin }) {
 
             {error && <div className="error">{error}</div>}
             <button className="primary big" disabled={busy}>
-              {busy ? 'One sec…' : setup ? 'Let’s go 🚀' : 'Log in'}
+              {busy ? 'One sec…' : setup ? 'Create my profile' : 'Log in'}
             </button>
           </form>
         )}

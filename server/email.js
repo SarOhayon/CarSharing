@@ -18,7 +18,7 @@ export function renderEmail({ heading, intro, rows = [], footer }) {
     '',
     ...rows.filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`),
     footer ? `\n${footer}` : '',
-    appUrl ? `\nOpen Family Car Share: ${appUrl}` : '',
+    appUrl ? `\nOpen Ohayon Car Sharing: ${appUrl}` : '',
   ].join('\n');
 
   const rowHtml = rows
@@ -29,15 +29,15 @@ export function renderEmail({ heading, intro, rows = [], footer }) {
         `<td style="padding:6px 0;font-size:14px;color:#0f172a;white-space:pre-line">${escapeHtml(v)}</td></tr>`,
     )
     .join('');
-  const html = `<!doctype html><html><body style="margin:0;background:#f4f5fb;font-family:Inter,Segoe UI,Arial,sans-serif">
+  const html = `<!doctype html><html><body style="margin:0;background:#f7f6f5;font-family:Inter,Segoe UI,Arial,sans-serif">
 <div style="max-width:520px;margin:0 auto;padding:24px">
-  <div style="font-weight:700;font-size:16px;color:#6366f1;margin-bottom:12px">🚗 Family Car Share</div>
+  <div style="font-weight:700;font-size:16px;color:#b91c1c;margin-bottom:12px">Ohayon Car Sharing</div>
   <div style="background:#fff;border:1px solid #e6e8f0;border-radius:16px;padding:24px">
     <h1 style="margin:0 0 8px;font-size:20px;color:#0f172a">${escapeHtml(heading)}</h1>
     <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.5">${escapeHtml(intro)}</p>
     ${rowHtml ? `<table style="border-collapse:collapse;width:100%">${rowHtml}</table>` : ''}
     ${footer ? `<p style="margin:16px 0 0;font-size:14px;color:#334155">${escapeHtml(footer)}</p>` : ''}
-    ${appUrl ? `<p style="margin:20px 0 0"><a href="${escapeHtml(appUrl)}" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:600">Open the calendar</a></p>` : ''}
+    ${appUrl ? `<p style="margin:20px 0 0"><a href="${escapeHtml(appUrl)}" style="display:inline-block;background:#b91c1c;color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:600">Open the calendar</a></p>` : ''}
   </div>
 </div></body></html>`;
   return { text, html };

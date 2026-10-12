@@ -54,7 +54,7 @@ const publicUser = (u) => ({
   color: u.color,
   email: u.email,
   phone: u.phone,
-  isAdmin: !!u.isAdmin,
+  isAdmin: !!u.isOwner, // only Sarah, the owner, can use the admin dashboard
   canApprove: !!u.canApprove,
   emailOptIn: u.emailOptIn !== false,
   claimed: !!u.passwordHash,
@@ -81,7 +81,7 @@ function requireAuth(req, _res, next) {
     next(err instanceof HttpError ? err : new HttpError(401, 'Please log in'));
   }
 }
-const requireAdmin = (req, _res, next) => (req.user.isAdmin ? next() : next(new HttpError(403, 'Admins only')));
+const requireAdmin = (req, _res, next) => (req.user.isOwner ? next() : next(new HttpError(403, 'Only Sarah can open the admin dashboard')));
 const requireApprover = (req, _res, next) =>
   req.user.canApprove ? next() : next(new HttpError(403, 'You can’t approve requests'));
 
@@ -178,7 +178,6 @@ app.post(
       color: isColor(color) ? color : '#10b981',
       ...validateContact(req.body),
       passwordHash: await bcrypt.hash(password, 10),
-      isAdmin: false,
       canApprove: false,
       emailOptIn: true,
       createdAt: new Date().toISOString(),
@@ -299,7 +298,7 @@ app.delete(
     const data = db();
     const r = data.reservations.find((x) => x.id === req.params.id);
     if (!r) fail(404, 'Reservation not found');
-    if (r.userId !== req.user.id && !req.user.isAdmin) fail(403, 'You can only cancel your own reservations');
+    if (r.userId !== req.user.id && !req.user.isOwner) fail(403, 'You can only cancel your own reservations');
     data.reservations = data.reservations.filter((x) => x.id !== r.id);
     save();
     await notifyCancelled(r, 'reservation', req.user);
@@ -361,7 +360,7 @@ app.delete(
     const data = db();
     const s = data.series.find((x) => x.id === req.params.id);
     if (!s) fail(404, 'Not found');
-    if (s.userId !== req.user.id && !req.user.isAdmin) fail(403, 'You can only remove your own events');
+    if (s.userId !== req.user.id && !req.user.isOwner) fail(403, 'You can only remove your own events');
     data.series = data.series.filter((x) => x.id !== s.id);
     save();
     await notifyCancelled(s, 'series', req.user);
@@ -374,7 +373,7 @@ app.post('/api/series/:id/skip', (req, res) => {
   const data = db();
   const s = data.series.find((x) => x.id === req.params.id);
   if (!s) fail(404, 'Not found');
-  if (s.userId !== req.user.id && !req.user.isAdmin) fail(403, 'You can only change your own events');
+  if (s.userId !== req.user.id && !req.user.isOwner) fail(403, 'You can only change your own events');
   if (!DATE_RE.test(req.body.date)) fail(400, 'Bad date');
   s.skipDates = [...new Set([...(s.skipDates || []), req.body.date])];
   save();
@@ -527,7 +526,6 @@ admin.post('/users', (req, res) => {
     email: '',
     phone: '',
     passwordHash: null,
-    isAdmin: false,
     canApprove: false,
     emailOptIn: true,
     createdAt: new Date().toISOString(),
@@ -541,11 +539,8 @@ admin.patch('/users/:id', (req, res) => {
   const data = db();
   const user = data.users.find((u) => u.id === req.params.id);
   if (!user) fail(404, 'User not found');
-  const { isAdmin, canApprove, color, name, resetPassword } = req.body;
-  if (typeof isAdmin === 'boolean') {
-    if (!isAdmin && user.isAdmin && data.users.filter((u) => u.isAdmin).length === 1) fail(400, 'Keep at least one admin');
-    user.isAdmin = isAdmin;
-  }
+  // Admin access isn't assignable: it always belongs to the owner (Sarah).
+  const { canApprove, color, name, resetPassword } = req.body;
   if (typeof canApprove === 'boolean') {
     if (!canApprove && user.canApprove && data.users.filter((u) => u.canApprove).length === 1)
       fail(400, 'Keep at least one person who can approve requests');
@@ -563,7 +558,7 @@ admin.delete('/users/:id', (req, res) => {
   if (req.params.id === req.user.id) fail(400, 'You can’t remove yourself');
   const user = data.users.find((u) => u.id === req.params.id);
   if (!user) fail(404, 'User not found');
-  if (user.isAdmin && data.users.filter((u) => u.isAdmin).length === 1) fail(400, 'Keep at least one admin');
+  if (user.isOwner) fail(400, 'The owner can’t be removed');
   if (user.canApprove && data.users.filter((u) => u.canApprove).length === 1)
     fail(400, 'Give someone else approval power first');
   data.users = data.users.filter((u) => u.id !== user.id);
@@ -606,7 +601,7 @@ app.use((err, _req, res, _next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚗 Family Car Share API on http://localhost:${PORT}`);
+  console.log(`Ohayon Car Sharing API on http://localhost:${PORT}`);
   console.log(`   Email: ${emailConfigured() ? 'Resend enabled' : 'not configured (emails are logged here)'}`);
   startReminderLoop();
 });

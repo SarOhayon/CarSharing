@@ -4,6 +4,7 @@ import WeekCalendar from '../components/WeekCalendar.jsx';
 import CarPlayground from '../components/CarPlayground.jsx';
 import CarArt from '../components/CarArt.jsx';
 import { Avatar, Modal, useToast } from '../components/ui.jsx';
+import Icon from '../components/Icon.jsx';
 import { addDays, fmtDay, fmtDuration, fmtRange, startOfWeek } from '../util.js';
 
 const toLocalInput = (d) => {
@@ -58,7 +59,7 @@ export default function CarCalendarPage({ me, users, cars, config, refresh }) {
         note: draft.note,
         request: asRequest,
       });
-      toast(r.status === 'pending' ? 'Request sent for approval 🙋' : `Booked the ${car.name}! 🎉`);
+      toast(r.status === 'pending' ? 'Request sent for approval' : `Booked the ${car.name}`);
       setDraft(null);
       load();
       refresh();
@@ -120,9 +121,9 @@ export default function CarCalendarPage({ me, users, cars, config, refresh }) {
         <section className="card calendar-card">
           <div className="cal-toolbar">
             <div className="week-nav">
-              <button className="icon-btn" onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹</button>
+              <button className="icon-btn" onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week"><Icon name="chevronLeft" /></button>
               <button className={`chip ${thisWeek ? 'on' : ''}`} onClick={() => setWeekStart(startOfWeek(new Date()))}>Today</button>
-              <button className="icon-btn" onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">›</button>
+              <button className="icon-btn" onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week"><Icon name="chevronRight" /></button>
               <h2>{weekLabel}</h2>
             </div>
             <div className="legend">
@@ -136,7 +137,7 @@ export default function CarCalendarPage({ me, users, cars, config, refresh }) {
           </div>
           <div className="cal-hint">
             <span>
-              👆 <span className="mouse-only">Press and drag over</span>
+              <span className="mouse-only">Press and drag over</span>
               <span className="touch-only">Tap, or press-and-hold then drag over</span> the time you need on the <b>{car.name}</b>.
             </span>
             <span className="muted">
@@ -172,7 +173,7 @@ export default function CarCalendarPage({ me, users, cars, config, refresh }) {
                 >
                   <span className="dot" style={{ background: me.color }} />
                   <span>
-                    <strong>{e.recurring ? `↻ ${e.title}` : c?.name}</strong>
+                    <strong>{e.recurring && <Icon name="repeat" size={13} className="inline-icon" />}{e.recurring ? e.title : c?.name}</strong>
                     <small>{e.recurring ? `${c?.name} · ` : ''}{fmtRange(e.start, e.end)}</small>
                   </span>
                   {e.status === 'pending' && <span className="pill warn">pending</span>}
@@ -191,7 +192,7 @@ export default function CarCalendarPage({ me, users, cars, config, refresh }) {
             <>
               <button className="ghost" onClick={() => setDraft(null)}>Cancel</button>
               {draftBeyond && !me.canApprove ? (
-                <button className="primary" disabled={busy} onClick={() => book(true)}>Send request 🙋</button>
+                <button className="primary" disabled={busy} onClick={() => book(true)}>Send request</button>
               ) : (
                 <button className="primary" disabled={busy} onClick={() => book(false)}>Reserve it</button>
               )}
@@ -225,13 +226,13 @@ export default function CarCalendarPage({ me, users, cars, config, refresh }) {
               It will show on the calendar as <b>pending</b> until then.
             </div>
           )}
-          {me.email && me.emailOptIn && <p className="muted small">✉️ We’ll email {me.email} a confirmation and pickup instructions.</p>}
+          {me.email && me.emailOptIn && <p className="muted small with-icon"><Icon name="mail" size={14} /> We’ll email {me.email} a confirmation and pickup instructions.</p>}
         </Modal>
       )}
 
       {selected && (
         <Modal
-          title={selected.recurring ? `↻ ${selected.title}` : 'Reservation'}
+          title={selected.recurring ? `Repeating: ${selected.title}` : 'Reservation'}
           onClose={() => setSelected(null)}
           footer={
             canEdit(selected) ? (

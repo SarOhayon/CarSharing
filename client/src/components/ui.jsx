@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { onColor } from '../util.js';
+import Icon from './Icon.jsx';
 
 export function Modal({ title, onClose, children, footer, wide }) {
   // Touch devices fire a synthetic mousedown right after the tap that opened
@@ -15,7 +16,7 @@ export function Modal({ title, onClose, children, footer, wide }) {
       <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-head">
           <h3>{title}</h3>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">✕</button>
+          <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-foot">{footer}</div>}
@@ -83,7 +84,7 @@ export function ColorPicker({ value, onChange, palette }) {
 export function Empty({ icon, title, children }) {
   return (
     <div className="empty">
-      <div className="empty-icon">{icon}</div>
+      {icon && <div className="empty-icon"><Icon name={icon} size={28} strokeWidth={1.6} /></div>}
       <h4>{title}</h4>
       {children && <p>{children}</p>}
     </div>

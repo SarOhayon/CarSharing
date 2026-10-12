@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Icon from './Icon.jsx';
 import { DAY_MS, SLOT_MIN, SLOTS_PER_DAY, addDays, fmtTime, onColor, slotLabel, startOfDay } from '../util.js';
 
 const SLOT_H = 22;
@@ -200,7 +201,7 @@ export default function WeekCalendar({ weekStart, events, users, me, windowEnd, 
                         onClick={() => onEventClick(b.ev)}
                       >
                         <span className="ev-name">
-                          {b.ev.recurring && '↻ '}
+                          {b.ev.recurring && <Icon name="repeat" size={11} strokeWidth={2.5} className="ev-icon" />}
                           {b.ev.recurring ? b.ev.title : u?.name || 'Someone'}
                           {b.ev.status === 'pending' && ' · pending'}
                         </span>

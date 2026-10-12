@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import CarArt from '../components/CarArt.jsx';
 import { Avatar, ColorPicker, Modal, useToast } from '../components/ui.jsx';
+import Icon from '../components/Icon.jsx';
 import { PALETTE } from '../util.js';
 
 const STYLES = [
@@ -39,7 +40,7 @@ export default function AdminPage({ me, users, cars, refresh }) {
     <div className="stack">
       <div>
         <div className="eyebrow">Behind the scenes</div>
-        <h1 className="page-title">Admin dashboard ⚙️</h1>
+        <h1 className="page-title">Admin dashboard</h1>
       </div>
 
       <div className="stats">
@@ -54,7 +55,7 @@ export default function AdminPage({ me, users, cars, refresh }) {
       <section className="card pad">
         <div className="section-head">
           <h2>Garage</h2>
-          <button className="primary" onClick={() => setEditing('new')}>＋ Add car</button>
+          <button className="primary" onClick={() => setEditing('new')}><Icon name="plus" size={16} /> Add car</button>
         </div>
         <div className="admin-cars">
           {cars.map((c) => (
@@ -78,14 +79,16 @@ export default function AdminPage({ me, users, cars, refresh }) {
         <div className="section-head">
           <h2>Family members</h2>
         </div>
-        <p className="muted small">“Can approve” decides who gets to OK special requests and repeating events. Approvers get an email when a new request comes in.</p>
+        <p className="muted small">
+          “Can approve” decides who gets to OK special requests and repeating events. Approvers get an email when a new request comes in.
+          Only you can open this dashboard.
+        </p>
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
                 <th>Member</th>
                 <th>Contact</th>
-                <th>Admin</th>
                 <th>Can approve</th>
                 <th />
               </tr>
@@ -101,6 +104,7 @@ export default function AdminPage({ me, users, cars, refresh }) {
                       </label>
                       <div>
                         <strong>{u.name}</strong>
+                        {u.isAdmin && <div className="pill">owner</div>}
                         {!u.claimed && <div className="pill warn">not set up yet</div>}
                       </div>
                     </div>
@@ -109,12 +113,6 @@ export default function AdminPage({ me, users, cars, refresh }) {
                     {u.email || <span className="muted">no email</span>}
                     <br />
                     {u.phone || <span className="muted">no phone</span>}
-                  </td>
-                  <td>
-                    <label className="switch">
-                      <input type="checkbox" checked={u.isAdmin} onChange={(e) => updateUser(u, { isAdmin: e.target.checked })} />
-                      <span className="track" />
-                    </label>
                   </td>
                   <td>
                     <label className="switch">
@@ -139,11 +137,12 @@ export default function AdminPage({ me, users, cars, refresh }) {
                       <button
                         className="icon-btn"
                         title="Remove"
+                        aria-label={`Remove ${u.name}`}
                         onClick={() =>
                           confirm(`Remove ${u.name} and all their reservations?`) && run(() => api.del(`/api/admin/users/${u.id}`), `${u.name} removed`)
                         }
                       >
-                        🗑
+                        <Icon name="trash" />
                       </button>
                     )}
                   </td>
@@ -210,7 +209,7 @@ function CarEditor({ car, onClose, refresh, toast }) {
         : await api.post('/api/admin/cars', fd);
       setCurrent(saved);
       await refresh();
-      toast(car ? 'Car updated' : `${saved.name} added to the garage 🚗`);
+      toast(car ? 'Car updated' : `${saved.name} added to the garage`);
       if (!car) onClose();
     } catch (err) {
       toast(err.message, 'bad');
@@ -327,12 +326,12 @@ function CarEditor({ car, onClose, refresh, toast }) {
           <p className="muted small">Uploaded files are visible to the whole family on the Insurance tab.</p>
           {current.insurance.map((d) => (
             <div key={d.id} className="doc">
-              <span className="doc-icon">{d.mime === 'application/pdf' ? '📕' : '🖼️'}</span>
+              <span className="doc-icon"><Icon name={d.mime === 'application/pdf' ? 'file' : 'image'} size={20} /></span>
               <a className="grow" href={d.url} target="_blank" rel="noreferrer">
                 {d.name}
                 {d.expires && <small className="muted"> · expires {d.expires}</small>}
               </a>
-              <button className="icon-btn" onClick={() => removeDoc(d)} title="Delete">🗑</button>
+              <button className="icon-btn" onClick={() => removeDoc(d)} title="Delete" aria-label="Delete"><Icon name="trash" /></button>
             </div>
           ))}
           <div className="row end">

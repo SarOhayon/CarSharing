@@ -1,10 +1,11 @@
 import { db, save, id } from './db.js';
 
 const FAMILY = [
-  { name: 'Sarah', color: '#8b5cf6', isAdmin: true, canApprove: false },
-  { name: 'Dad', color: '#0ea5e9', isAdmin: true, canApprove: true },
-  { name: 'Mom', color: '#f43f5e', isAdmin: false, canApprove: false },
-  { name: 'Rebeccah', color: '#f59e0b', isAdmin: false, canApprove: false },
+// Sarah is the owner: the only person who can open the admin dashboard.
+  { name: 'Sarah', color: '#8b5cf6', isOwner: true, canApprove: false },
+  { name: 'Dad', color: '#0ea5e9', canApprove: true },
+  { name: 'Mom', color: '#f43f5e', canApprove: false },
+  { name: 'Rebeccah', color: '#f59e0b', canApprove: false },
 ];
 
 const CARS = [
@@ -46,5 +47,12 @@ export function seed() {
     if (u.emailOptIn === undefined) u.emailOptIn = u.smsOptIn !== false;
     delete u.smsOptIn;
   }
+  // Databases created before the admin lock had an assignable isAdmin flag.
+  // Admin is now owner-only: make Sarah the owner and drop everyone else's access.
+  if (!data.users.some((u) => u.isOwner)) {
+    const sarah = data.users.find((u) => u.name.trim().toLowerCase() === 'sarah');
+    if (sarah) sarah.isOwner = true;
+  }
+  for (const u of data.users) delete u.isAdmin;
   save();
 }
