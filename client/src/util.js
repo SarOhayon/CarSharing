@@ -64,3 +64,22 @@ export function onColor(hex) {
 }
 
 export const PALETTE = ['#8b5cf6', '#0ea5e9', '#f43f5e', '#f59e0b', '#10b981', '#ec4899', '#14b8a6', '#6366f1', '#84cc16', '#f97316', '#06b6d4', '#a855f7'];
+
+// Shrinks big photos before upload (phone pictures are often 3–8 MB; some
+// hosts cap uploads at about 4 MB). PDFs and small images are sent as-is.
+export async function prepareUpload(file, maxSide = 2000) {
+  if (!file?.type?.startsWith('image/') || file.type === 'image/gif' || file.size < 1.2 * 1024 * 1024) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+  } catch {
+    return file; // the browser can't read this image type; let the server decide
+  }
+}

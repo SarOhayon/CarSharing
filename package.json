@@ -8,13 +8,15 @@
     "dev": "concurrently -k -n api,web -c blue,magenta \"node --watch server/index.js\" \"vite\"",
     "build": "vite build",
     "start": "node server/index.js",
-    "test": "node --test server/*.test.js",
+    "test": "APP_TIMEZONE=America/New_York node --test server/*.test.js",
     "reset-password": "node server/reset-password.js"
   },
   "engines": {
     "node": ">=18.17"
   },
   "dependencies": {
+    "@upstash/redis": "^1.39.0",
+    "@vercel/blob": "^2.8.1",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "dotenv": "^18.0.7",

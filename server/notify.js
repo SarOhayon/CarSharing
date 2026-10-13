@@ -2,11 +2,10 @@
 // failure is logged by sendEmail and never breaks the request that caused it.
 import { db } from './db.js';
 import { renderEmail, sendEmail } from './email.js';
+import { fmt, fmtTime } from './tz.js';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const fmt = (iso) =>
-  new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 const wantsEmail = (user) => Boolean(user?.email) && user.emailOptIn !== false;
 
@@ -74,9 +73,8 @@ export const notify = {
   },
 
   handoffReminder(user, car, ev, next, nextUser, minutesLeft) {
-    const timeOnly = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    return send(user, `${nextUser.name} has the ${car.name} next, at ${timeOnly(next.start)}`, {
-      heading: `Please bring the ${car.name} back by ${timeOnly(ev.end)}`,
+    return send(user, `${nextUser.name} has the ${car.name} next, at ${fmtTime(next.start)}`, {
+      heading: `Please bring the ${car.name} back by ${fmtTime(ev.end)}`,
       intro: `Your booking ends in ${Math.max(1, Math.round(minutesLeft))} minutes, and ${nextUser.name} has the car right after you.`,
       rows: [
         ...carRows(car),

@@ -36,7 +36,7 @@ Requires Node 18.17+.
 
 ```bash
 npm install
-cp .env.example .env      # then edit it: FAMILY_CODE, JWT_SECRET, TZ, Resend settings
+cp .env.example .env      # then edit it: FAMILY_CODE, JWT_SECRET, APP_TIMEZONE, Resend settings
 npm run dev               # http://localhost:5173 (API on :3001)
 ```
 
@@ -75,22 +75,52 @@ Then tap that person on the login screen and set a new password (they'll need th
 
 ## Hosting it online
 
-The app is an always-on Node server that saves data to disk, so it needs a host with a persistent disk. GitHub Pages and Vercel don't fit without a rewrite. `render.yaml` sets it up on [Render](https://render.com) (about $7/month plus about $0.25/month for the disk):
+The same code runs in three places. It picks where to keep data automatically:
+
+| Where | Data | Files (photos, documents, proof) | Reminder emails |
+| --- | --- | --- | --- |
+| Your computer | `data/db.json` | `data/files/` | sent by the app every minute |
+| [Render](https://render.com) (`render.yaml`) | `data/` on a persistent disk | same disk | sent by the app every minute |
+| [Vercel](https://vercel.com) | Upstash Redis | Vercel Blob (private) | a GitHub Action pings the app every 10 minutes |
+
+### Vercel (free for personal use)
+
+1. **Import the project:** in Vercel choose **Add New → Project** and import this GitHub repo. Leave the build settings as they are (`vercel.json` sets them).
+2. **Add a database:** in the project open **Storage → Create** (or **Marketplace**) and add **Upstash for Redis** (free plan). Connect it to the project. This adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
+3. **Add file storage:** in **Storage → Create** add a **Blob** store, choose **Private**, and connect it. This adds `BLOB_READ_WRITE_TOKEN`. (If your store is public, also set `BLOB_ACCESS=public`.)
+4. **Settings → Environment Variables:** add
+   - `JWT_SECRET`: any long random string
+   - `FAMILY_CODE`: the code family members use to join
+   - `APP_TIMEZONE`: e.g. `America/New_York`
+   - `APP_URL`: your site's address, e.g. `https://ohayoncars.com`
+   - `CRON_SECRET`: another long random string
+   - `RESEND_API_KEY` and `EMAIL_FROM` for email
+5. **Redeploy** (Deployments → ⋯ → Redeploy) so the new settings take effect.
+6. **Turn on reminder emails:** on GitHub open the repo's **Settings → Secrets and variables → Actions** and add two repository secrets, `APP_URL` (same as above) and `CRON_SECRET` (same value as in Vercel). The **Send reminder emails** workflow then runs every 10 minutes. GitHub may run it a few minutes late, and it pauses scheduled workflows after 60 days without repo activity (re-enable it in the **Actions** tab).
+7. **Domain:** in the Vercel project open **Settings → Domains**, add your domain, and follow the DNS instructions. HTTPS is automatic.
+
+Uploads on Vercel are capped at 4 MB per file; photos are shrunk in the browser before upload, so phone pictures are fine. To reset a password on Vercel, put the Upstash URL and token in your local `.env` and run `npm run reset-password -- Sarah` from your computer.
+
+### Render
+
+`render.yaml` sets it up as one always-on service with a 1 GB disk (about $7/month plus about $0.25/month for the disk):
 
 1. In Render, choose **New → Blueprint** and pick this GitHub repo.
-2. Fill in `FAMILY_CODE`, `TZ`, `APP_URL`, `RESEND_API_KEY` and `EMAIL_FROM` when asked. `JWT_SECRET` is generated for you.
-3. To use your own domain, add it under the service's **Settings → Custom Domains** and copy the DNS records Render shows into your domain registrar. HTTPS is set up automatically. Then set `APP_URL` to `https://yourdomain.com`.
+2. Fill in `FAMILY_CODE`, `APP_TIMEZONE`, `APP_URL`, `RESEND_API_KEY` and `EMAIL_FROM` when asked. `JWT_SECRET` is generated for you.
+3. To use your own domain, add it under the service's **Settings → Custom Domains** and copy the DNS records Render shows into your domain registrar. HTTPS is set up automatically.
 
-The hosted site starts with a fresh database, so set up profiles, photos and plates again there.
+Either way, the hosted site starts with a fresh database, so set up profiles, photos and plates again there.
 
 ## Where data lives
 
-Everything is stored in `data/`: `db.json`, uploaded car photos and insurance documents. That folder and `.env` are **git-ignored**, so passwords, API keys, contact details and insurance files never end up on GitHub. Back up `data/` if you host this somewhere.
+Locally and on Render everything is stored in `data/`: `db.json` and uploaded files. On Vercel it's in Upstash Redis and Vercel Blob. `data/` and `.env` are **git-ignored**, so passwords, API keys, contact details and insurance files never end up on GitHub. Back up `data/` if you host this somewhere.
 
 ## Project layout
 
 ```
-server/        Express API, JSON storage, scheduling rules, email notifications
+server/        Express app (app.js), local server (index.js), storage (db.js, files.js),
+               scheduling, time zone, email notifications
+api/           Vercel entry point
 client/src/    React app (Vite)
   pages/       Login, Calendar, Repeating, Requests, Insurance, Admin, Profile
   components/  WeekCalendar (drag-to-book grid), CarPlayground (car panel), CarPhoto, Icon

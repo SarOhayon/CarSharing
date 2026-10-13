@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import CarPhoto from '../components/CarPhoto.jsx';
 import { Avatar, ColorPicker, Modal, useToast } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
-import { PALETTE } from '../util.js';
+import { PALETTE, prepareUpload } from '../util.js';
 
 const blankCar = { name: '', make: '', model: '', year: '', color: '', interior: '', plate: '', notes: '', pickupInstructions: '' };
 
@@ -196,7 +196,7 @@ function CarEditor({ car, onClose, refresh, toast }) {
     try {
       const fd = new FormData();
       for (const k of Object.keys(blankCar)) fd.append(k, form[k] ?? '');
-      if (photo) fd.append('photo', photo);
+      if (photo) fd.append('photo', await prepareUpload(photo));
       const saved = car
         ? await api.patch(`/api/admin/cars/${car.id}`, fd)
         : await api.post('/api/admin/cars', fd);
@@ -214,7 +214,7 @@ function CarEditor({ car, onClose, refresh, toast }) {
   const uploadDoc = async () => {
     if (!doc.file) return toast('Choose a file first', 'bad');
     const fd = new FormData();
-    fd.append('file', doc.file);
+    fd.append('file', await prepareUpload(doc.file));
     fd.append('name', doc.name || doc.file.name);
     fd.append('expires', doc.expires);
     try {

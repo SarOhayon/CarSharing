@@ -23,7 +23,7 @@ services:
       # You'll be asked for these when you create the Blueprint:
       - key: FAMILY_CODE
         sync: false
-      - key: TZ # e.g. America/New_York
+      - key: APP_TIMEZONE # e.g. America/New_York
         sync: false
       - key: APP_URL # e.g. https://ohayoncars.com
         sync: false

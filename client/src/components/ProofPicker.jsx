@@ -1,4 +1,5 @@
 import Icon from './Icon.jsx';
+import { prepareUpload } from '../util.js';
 
 const MAX_FILES = 5;
 const MAX_BYTES = 15 * 1024 * 1024;
@@ -57,7 +58,7 @@ export function ProofLinks({ item }) {
   return (
     <div className="proof-chips">
       {item.proof.map((p) => (
-        <a key={p.id} className="proof-chip" href={`/api/requests/${item.id}/proof/${p.id}`} target="_blank" rel="noreferrer">
+        <a key={p.id} className="proof-chip" href={`/api/files/${p.id}`} target="_blank" rel="noreferrer">
           <Icon name="paperclip" size={13} />
           <span className="proof-name">{p.name}</span>
         </a>
@@ -66,7 +67,7 @@ export function ProofLinks({ item }) {
   );
 }
 
-export function requestFormData({ carId, start, end, note, files, reapplyOf }) {
+export async function requestFormData({ carId, start, end, note, files, reapplyOf }) {
   const fd = new FormData();
   fd.append('carId', carId);
   fd.append('start', new Date(start).toISOString());
@@ -74,6 +75,6 @@ export function requestFormData({ carId, start, end, note, files, reapplyOf }) {
   fd.append('note', note || '');
   fd.append('request', 'true');
   if (reapplyOf) fd.append('reapplyOf', reapplyOf);
-  for (const f of files || []) fd.append('proof', f);
+  for (const f of files || []) fd.append('proof', await prepareUpload(f));
   return fd;
 }

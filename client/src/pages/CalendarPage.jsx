@@ -50,7 +50,7 @@ export default function CarCalendarPage({ me, users, cars, config, refresh, danc
       const r = await api.post(
         '/api/reservations',
         asRequest
-          ? requestFormData({ carId: car.id, start: draft.start, end: draft.end, note: draft.note, files: draft.files })
+          ? await requestFormData({ carId: car.id, start: draft.start, end: draft.end, note: draft.note, files: draft.files })
           : { carId: car.id, start: new Date(draft.start).toISOString(), end: new Date(draft.end).toISOString(), note: draft.note },
       );
       toast(r.status === 'pending' ? 'Request sent for approval' : `Booked the ${car.name}`);

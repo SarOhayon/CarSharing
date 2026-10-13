@@ -75,7 +75,7 @@ export default function RequestsPage({ me, users, cars, config, refresh, go }) {
     e.preventDefault();
     setBusy(true);
     try {
-      await api.post('/api/reservations', requestFormData({ ...form, files, reapplyOf: reapply?.id }));
+      await api.post('/api/reservations', await requestFormData({ ...form, files, reapplyOf: reapply?.id }));
       toast(reapply ? 'Reapplied — sent for approval' : 'Request sent');
       cancelReapply();
       load();

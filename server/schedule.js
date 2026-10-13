@@ -1,30 +1,21 @@
 // Pure scheduling helpers: expanding recurring series and detecting overlaps.
 
+import { addDaysYmd, weekdayOf, ymdAt, zonedTime } from './tz.js';
+
 const DAY = 24 * 60 * 60 * 1000;
 
-const pad = (n) => String(n).padStart(2, '0');
-export const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-function atLocal(dateStr, time) {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const [hh, mm] = time.split(':').map(Number);
-  return new Date(y, m - 1, d, hh, mm, 0, 0);
-}
-
-// Every occurrence of a recurring series that overlaps [from, to).
+// Every occurrence of a recurring series that overlaps [from, to). Days and
+// times are in the family's time zone, so "8:00" stays 8:00 across daylight saving.
 export function expandSeries(series, from, to) {
   const out = [];
-  const first = atLocal(series.startDate, '00:00');
-  const last = atLocal(series.endDate, '23:59');
-  const begin = new Date(Math.max(first.getTime(), from.getTime() - DAY));
-  begin.setHours(0, 0, 0, 0);
-  for (let day = begin; day <= last && day < to; day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)) {
-    if (!series.daysOfWeek.includes(day.getDay())) continue;
-    const date = ymd(day);
+  const firstDay = ymdAt(new Date(from.getTime() - DAY)); // catch overnight events from the day before
+  for (let date = firstDay > series.startDate ? firstDay : series.startDate; date <= series.endDate; date = addDaysYmd(date, 1)) {
+    if (zonedTime(date) >= to) break;
+    if (!series.daysOfWeek.includes(weekdayOf(date))) continue;
     if (series.skipDates?.includes(date)) continue;
-    const start = atLocal(date, series.startTime);
-    let end = atLocal(date, series.endTime);
-    if (end <= start) end = new Date(end.getTime() + DAY); // overnight
+    const start = zonedTime(date, series.startTime);
+    let end = zonedTime(date, series.endTime);
+    if (end <= start) end = zonedTime(addDaysYmd(date, 1), series.endTime); // overnight
     if (end > from && start < to) {
       out.push({
         id: `${series.id}:${date}`,
@@ -71,8 +62,8 @@ export function findConflict(data, carId, start, end, { ignoreReservation, ignor
 
 // Checks every occurrence of a proposed series against existing bookings.
 export function findSeriesConflict(data, series) {
-  const from = atLocal(series.startDate, '00:00');
-  const to = new Date(atLocal(series.endDate, '23:59').getTime() + DAY);
+  const from = zonedTime(series.startDate);
+  const to = zonedTime(addDaysYmd(series.endDate, 2));
   for (const occ of expandSeries(series, from, to)) {
     const hit = findConflict(data, series.carId, occ.start, occ.end, { ignoreSeries: series.id });
     if (hit) return { occurrence: occ, conflict: hit };
@@ -80,10 +71,8 @@ export function findSeriesConflict(data, series) {
   return null;
 }
 
+// End of the last day anyone can book without approval (today + 14 days).
 export function bookingWindowEnd(now = new Date()) {
   const days = Number(process.env.BOOKING_WINDOW_DAYS || 14);
-  const end = new Date(now);
-  end.setHours(23, 59, 59, 999);
-  end.setDate(end.getDate() + days);
-  return end;
+  return new Date(zonedTime(addDaysYmd(ymdAt(now), days + 1)).getTime() - 1);
 }

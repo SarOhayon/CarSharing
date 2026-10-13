@@ -1,4 +1,4 @@
-import { db, save } from './db.js';
+import { db, withDb, claimOnce, releaseClaim, pruneClaims } from './db.js';
 import { eventsFor } from './schedule.js';
 import { notify } from './notify.js';
 
@@ -14,62 +14,56 @@ const offsets = () =>
     .filter((n) => n > 0)
     .sort((a, b) => a - b);
 
+// Sends whatever reminder emails are due. Runs every minute on a normal
+// server, or whenever /api/cron/reminders is pinged (Vercel). Each email is
+// claimed before sending, so overlapping runs never send the same one twice.
 export async function runReminders(now = new Date()) {
   const data = db();
   const offs = offsets();
-  if (!offs.length) return;
-  const horizon = new Date(now.getTime() + offs[offs.length - 1] * 60_000);
-  let changed = false;
+  let sent = 0;
 
-  for (const ev of eventsFor(data, null, now, horizon)) {
-    if (ev.status !== 'approved') continue;
-    const start = new Date(ev.start);
-    if (start <= now) continue;
-    const user = data.users.find((u) => u.id === ev.userId);
-    const car = data.cars.find((c) => c.id === ev.carId);
-    if (!user || !car || !user.email || user.emailOptIn === false) continue;
+  if (offs.length) {
+    const horizon = new Date(now.getTime() + offs[offs.length - 1] * 60_000);
+    for (const ev of eventsFor(data, null, now, horizon)) {
+      if (ev.status !== 'approved') continue;
+      const start = new Date(ev.start);
+      if (start <= now) continue;
+      const user = data.users.find((u) => u.id === ev.userId);
+      const car = data.cars.find((c) => c.id === ev.carId);
+      if (!user || !car || !user.email || user.emailOptIn === false) continue;
 
-    // Pickup-instruction emails. Only the tightest reminder that is due gets sent; any earlier, larger
-    // reminders that were missed (e.g. server was down) are skipped.
-    const minutesLeft = (start - now) / 60_000;
-    const due = offs.find((o) => minutesLeft <= o);
-    if (due === undefined) continue;
-    const key = `${ev.id}@${ev.start}@${due}`;
-    if (data.sentReminders[key]) continue;
-
-    const res = await notify.pickupReminder(user, car, ev, minutesLeft);
-    if (res.ok) {
-      for (const o of offs) if (o >= due) data.sentReminders[`${ev.id}@${ev.start}@${o}`] = now.toISOString();
-      changed = true;
+      // Pickup-instruction emails. Only the tightest reminder that is due gets
+      // sent; earlier ones that were missed (e.g. the server was down) are skipped.
+      const minutesLeft = (start - now) / 60_000;
+      const due = offs.find((o) => minutesLeft <= o);
+      if (due === undefined) continue;
+      if (await sendOnce(`${ev.id}@${ev.start}@${due}`, () => notify.pickupReminder(user, car, ev, minutesLeft))) sent++;
     }
   }
 
-  if (await runHandoffs(data, now)) changed = true;
+  sent += await runHandoffs(data, now);
+  await pruneClaims(now);
+  return sent;
+}
 
-  // Forget reminders older than 30 days.
-  const cutoff = now.getTime() - 30 * 24 * 60 * 60 * 1000;
-  for (const [k, v] of Object.entries(data.sentReminders)) {
-    if (new Date(v).getTime() < cutoff) {
-      delete data.sentReminders[k];
-      changed = true;
-    }
-  }
-  if (changed) save();
+async function sendOnce(key, send) {
+  if (!(await claimOnce(key))) return false;
+  const res = await send();
+  if (!res.ok) await releaseClaim(key); // try again next run
+  return res.ok;
 }
 
 // Emails whoever has a car that someone else booked right after them, so
 // they know to bring it back on time.
 async function runHandoffs(data, now) {
-  if (HANDOFF_MINUTES <= 0) return false;
-  let changed = false;
+  if (HANDOFF_MINUTES <= 0) return 0;
+  let sent = 0;
   const soon = new Date(now.getTime() + HANDOFF_MINUTES * 60_000);
   const ending = eventsFor(data, null, now, soon).filter(
     (ev) => ev.status === 'approved' && new Date(ev.end) > now && new Date(ev.end) <= soon,
   );
 
   for (const ev of ending) {
-    const key = `handoff:${ev.id}@${ev.end}`;
-    if (data.sentReminders[key]) continue;
     const end = new Date(ev.end);
     const next = eventsFor(data, ev.carId, end, new Date(end.getTime() + HANDOFF_GAP_MINUTES * 60_000))
       .filter((n) => n.status === 'approved' && n.userId !== ev.userId && new Date(n.start) >= end)
@@ -81,17 +75,14 @@ async function runHandoffs(data, now) {
     const car = data.cars.find((c) => c.id === ev.carId);
     if (!user || !nextUser || !car || !user.email || user.emailOptIn === false) continue;
 
-    const res = await notify.handoffReminder(user, car, ev, next, nextUser, (end - now) / 60_000);
-    if (res.ok) {
-      data.sentReminders[key] = now.toISOString();
-      changed = true;
-    }
+    const minutesLeft = (end - now) / 60_000;
+    if (await sendOnce(`handoff:${ev.id}@${ev.end}`, () => notify.handoffReminder(user, car, ev, next, nextUser, minutesLeft))) sent++;
   }
-  return changed;
+  return sent;
 }
 
 export function startReminderLoop() {
-  const tick = () => runReminders().catch((err) => console.error('[reminders]', err));
+  const tick = () => withDb(() => runReminders()).catch((err) => console.error('[reminders]', err));
   tick();
   return setInterval(tick, 60_000);
 }

@@ -8,7 +8,8 @@ async function request(method, url, body) {
   const res = await fetch(url, opts);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.error || `Request failed (${res.status})`);
+    const fallback = res.status === 413 ? 'That upload is too big — try fewer or smaller files' : `Request failed (${res.status})`;
+    const err = new Error(data.error || fallback);
     err.status = res.status;
     err.code = data.code;
     throw err;
